@@ -170,7 +170,6 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		Sleep(10);
 		int nRows = hField->getNRows();
 		int nCols = hField->getNCols();
 
