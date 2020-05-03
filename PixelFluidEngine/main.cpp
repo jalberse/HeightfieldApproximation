@@ -3,22 +3,10 @@
 
 #include <math.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
 
 // TODO: 
-// MAKE IT FASTERRRR IT SUCKS SO BAD RIGHT NOW!!!
-//		I don't know how to make it better besides better bounds checking though. 
-//		Maybe just won't do realtime since I won't be able to push it to GPU anyways
-//		Other algorithms I definitely can't do realtime anyways, so... might as well just go compute->save->load->render route
-//
-//		BUT I'm also confused because it seems to be running very fast when I'm just like, stepping in main() without the olcEngine class?
-//		Maybe we can write frames to a vector of frames? And we can scrub through?
 // Toggle periodic boundary conditions vs mirror
-// Render 2D by just coloring 0-255
+// Click to interact with it (2D)
 // Be able to render a 3D plane with pixelGameEngine
 // Render heightmap with pixelGameEngine (3D)
 // Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
@@ -100,7 +88,7 @@ public:
 		// Update heights based on new velocities
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
-			//u[i] += v[i];
+			//u[i] += v[i]; This gives more extreme and visually interesting results but is unphysical.
 			u[i] += v[i] * fElapsedTime;
 		}
 	}
