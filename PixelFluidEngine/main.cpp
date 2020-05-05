@@ -5,11 +5,60 @@
 
 
 // TODO: 
+// Button to reset to a perlin noise heightmap would be cool
+// Buttons to set perlin parameters to be used when we reset to perlin
+// Basic display/debug infor showing perlin params, etc
+// Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
 // Toggle periodic boundary conditions vs mirror
 // Click to interact with it (2D)
+// Different render modes for 2D - gradients, component velocities, etc?
 // Be able to render a 3D plane with pixelGameEngine
 // Render heightmap with pixelGameEngine (3D)
-// Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
+// Switch between 2D and 3D views (menu system?)
+
+
+void perlinNoise2D(int nRows, int nCols, float* fSeed, int nOctaves, float fBias, float* fOutput)
+{
+	/*
+	Populates the array fOutput, which is a flattened matrix of size nRows x nCols, with 2D perlin noise
+	fSeed should also be a flattened matrix of size nRows x nCols, populated with random noise
+	
+	Made referencing Javidx9's Perlin source under the GNU GPLv3 license:
+	https://github.com/OneLoneCoder/videos/blob/master/OneLoneCoder_PerlinNoise.cpp
+	*/
+	for (int x = 0; x < nCols; x++)
+	{
+		for (int y = 0; y < nRows; y++)
+		{
+			float fNoise = 0.0f;
+			float fScaleAcc = 0.0f;
+			float fScale = 1.0f;
+
+			for (int o = 0; o < nOctaves; o++)
+			{
+				int nPitch = nCols >> o;
+				int nSampleX1 = (x / nPitch) * nPitch;
+				int nSampleY1 = (y / nPitch) * nPitch;
+
+				int nSampleX2 = (nSampleX1 + nPitch) % nCols;
+				int nSampleY2 = (nSampleY1 + nPitch) % nCols;
+
+				float fBlendX = (float)(x - nSampleX1) / (float)nPitch;
+				float fBlendY = (float)(y - nSampleY1) / (float)nPitch;
+
+				float fSampleT = (1.0f - fBlendX) * fSeed[nSampleY1 * nCols + nSampleX1] + fBlendX * fSeed[nSampleY1 * nCols + nSampleX2];
+				float fSampleB = (1.0f - fBlendX) * fSeed[nSampleY2 * nCols + nSampleX1] + fBlendX * fSeed[nSampleY2 * nCols + nSampleX2];
+			
+				fScaleAcc += fScale;
+				fNoise += (fBlendY * (fSampleB - fSampleT) + fSampleT) * fScale;
+				fScale += fScale / fBias;
+			}
+
+			// Scale down by dividing by accumulated scaling factors
+			fOutput[y * nCols + x] = fNoise / fScaleAcc;
+		}
+	}
+}
 
 class HeightField
 	/*
@@ -19,7 +68,18 @@ class HeightField
 	*/
 {
 public:
-	float* u = nullptr; // height matrix, flattened
+	HeightField(int rows, int cols)
+	{
+		nRows = rows;
+		nCols = cols;
+		u = new float[nRows * nCols];
+		v = new float[nRows * nCols];
+		for (int i = 0; i < (nRows * nCols); i++)
+		{
+			u[i] = 1.0f;
+			v[i] = 0;
+		}
+	}
 
 	HeightField(int rows, int cols, float* heights)
 	{
@@ -31,6 +91,22 @@ public:
 		{
 			u[i] = heights[i];
 			v[i] = 0;
+		}
+	}
+
+	void setHeights(float* heights)
+	{
+		for (int i = 0; i < (nRows * nCols); i++)
+		{
+			u[i] = heights[i];
+		}
+	}
+
+	void setVelocities(float* velocities)
+	{
+		for (int i = 0; i < (nRows * nCols); i++)
+		{
+			v[i] = velocities[i];
 		}
 	}
 
@@ -88,14 +164,14 @@ public:
 		// Update heights based on new velocities
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
-			//u[i] += v[i]; This gives more extreme and visually interesting results but is unphysical.
+			// u[i] += v[i]; // This gives more extreme and visually interesting results but is unphysical.
 			u[i] += v[i] * fElapsedTime;
 		}
 	}
 
-	float getHeight(const int& i, const int& j)
+	float getHeight(const int& x, const int& y)
 	{
-		return u[i * nCols + j];
+		return u[y * nCols + x];
 	}
 
 	int getNCols()
@@ -112,7 +188,12 @@ private:
 	int nRows;
 	int nCols;
 	float* v = nullptr; // velocity matrix, flattened
+	float* u = nullptr; // height matrix, flattened
 
+	// Removed for now because slower by doing checks on internal cells;
+	// However leaving in because in the future we may want to do arbitrary domain;
+	// in which case we will have to check if neighbors are in or out of bounds! 
+	// (which we can do by having another matrix of flags, or bitpacked flags in a smaller array if we really want)
 	//float getVelocityChange(const int& i, const int& j)
 	//{
 	//	
@@ -147,23 +228,26 @@ public:
 		sAppName = "Pixel Fluid Engine";
 	}
 
-public:
+private:
 	HeightField* hField = nullptr;
 	float* initialHeights = nullptr;
+	
+	// perlin noise parameters
+	float* fNoiseSeed = nullptr;
+	int nOctaveCount = 8;
+	float fScalingBias = 2.0f;
 
 	bool OnUserCreate() override
 	{
 		int nRows = ScreenWidth();
 		int nCols = ScreenHeight();
+		fNoiseSeed = new float[nRows * nCols];
+		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
+
+		// Populate initial conditions of PDE with perlin noise
 		initialHeights = new float[nRows * nCols];
-		for (int i = 0; i < nRows; i++)
-		{
-			for (int j = 0; j < nCols; j++)
-			{
-				float dist = sqrt((i - nRows / 2) * (i - nRows / 2) + (j - nCols / 2) * (j - nCols / 2));
-				initialHeights[i * nCols + j] = dist * 2;
-			}
-		}
+		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveCount, fScalingBias, initialHeights);
+
 		hField = new HeightField(nRows, nCols, initialHeights);
 		return true;
 	}
@@ -177,8 +261,8 @@ public:
 		{
 			for (int y = 0; y < nRows; y++)
 			{
-				int t = hField->u[y * nCols + x];
-				Draw(x, y, olc::Pixel(t, 0, 0));
+				int t = hField->getHeight(x,y) * 255.0f;
+				Draw(x, y, olc::Pixel(t, t, t));
 			}
 		}
 		hField->step(fElapsedTime);
@@ -189,34 +273,8 @@ public:
 int main()
 {
 	PixelFluidEngine demo;
-	if (demo.Construct(100, 100, 10, 10))
+	if (demo.Construct(256, 256, 2, 2))
 		demo.Start();
-
-	/*int nRows = 100;
-	int nCols = 100;
-
-	float* initialHeights = new float[nRows * nCols];
-	for (int i = 0; i < nRows; i++)
-	{
-		for (int j = 0; j < nCols; j++)
-		{
-			initialHeights[i * nCols + j] = (float)((i+1) * (255 / nRows));
-		}
-	}
-	HeightField* hField = new HeightField(nRows, nCols, initialHeights);
-
-
-	for (int k = 0; k < 10000; k++)
-	{
-		for (int x = 0; x < nCols; x++)
-		{
-			for (int y = 0; y < nRows; y++)
-			{
-				int t = hField->u[y * nCols + x];
-				hField->step(0.01f);
-			}
-		}
-	}*/
 
 	return 0;
 }
