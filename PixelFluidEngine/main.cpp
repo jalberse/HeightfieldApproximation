@@ -236,8 +236,8 @@ private:
 	
 	// perlin noise parameters
 	float* fNoiseSeed = nullptr;
-	std::array<int, 8> nOctaves = { 1, 2, 3, 4, 5, 6, 7, 8 };
-	int nOctaveIdx = 7;
+	int nOctaveMax = 8;
+	int nOctave = 8;
 	float fScalingBias = 2.0f;
 
 	bool OnUserCreate() override
@@ -247,7 +247,7 @@ private:
 
 		// Populate initial conditions of PDE with perlin noise
 		initialHeights = new float[nRows * nCols];
-		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaves[nOctaveIdx], fScalingBias, initialHeights);
+		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
 
 		hField = new HeightField(nRows, nCols, initialHeights);
 		return true;
@@ -259,13 +259,15 @@ private:
 		if (GetKey(olc::Key::SPACE).bPressed)
 		{
 			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
-			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaves[nOctaveIdx], fScalingBias, initialHeights);
+			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
 			hField->setHeights(initialHeights); 
 			hField->zeroVelocities();
 		}
 
-		if (GetKey(olc::Key::P).bPressed) if (nOctaveIdx < nOctaves.size() - 1) nOctaveIdx++;
-		if (GetKey(olc::Key::O).bPressed) if (nOctaveIdx > 0) nOctaveIdx--;
+		if (GetKey(olc::Key::P).bPressed) (nOctave == nOctaveMax) ? nOctave = 1 : nOctave++;
+		if (GetKey(olc::Key::O).bPressed) (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
+
+		Clear(olc::Pixel(0,0,0));
 
 		for (int x = 0; x < nCols; x++)
 		{
@@ -275,6 +277,9 @@ private:
 				Draw(x, y, olc::Pixel(t/3, t/2, t));
 			}
 		}
+
+		DrawString(260, 10, std::to_string(nOctave));
+
 		hField->step(fElapsedTime);
 		return true;
 	}
