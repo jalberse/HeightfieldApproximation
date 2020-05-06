@@ -5,8 +5,8 @@
 
 
 // TODO: 
-// Button to reset to a perlin noise heightmap would be cool
 // Buttons to set perlin parameters to be used when we reset to perlin
+// Toggle for dampening, and be able to set dampening term
 // Basic display/debug infor showing perlin params, etc
 // Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
 // Toggle periodic boundary conditions vs mirror
@@ -116,31 +116,31 @@ public:
 		// Calculate new velocities - boundary cells
 		// Top left corner [0,0]
 		v[0] += (u[0] + u[(0 + 1) * nCols] + u[0] + u[1]) / 4.0f - u[0];
-		v[0] *= 0.99f;
+		//v[0] *= 0.99f;
 		// Top right corner [0,nCols - 1]
 		v[nCols - 1] += (u[nCols - 1] + u[1 * nCols + (nCols - 1)] + u[nCols - 2] + u[nCols - 1]) / 4.0f - u[nCols - 1];
-		v[nCols - 1] *= 0.99f;
+		//v[nCols - 1] *= 0.99f;
 		// Bottom left corner [nRows - 1, 0]
 		v[(nRows - 1) * nCols] += (u[(nRows - 2) * nCols] + u[(nRows - 1) * nCols] + u[(nRows - 1) * nCols] + u[(nRows - 1) * nCols + 1]) / 4.0f - u[(nRows - 1) * nCols];
-		v[(nRows - 1) * nCols] *= 0.99f;
+		//v[(nRows - 1) * nCols] *= 0.99f;
 		// Bottom right corner [nRows - 1, nCols - 1]
 		v[(nRows - 1) * nCols + (nCols - 1)] += (u[(nRows - 2) * nCols + (nCols - 1)] + u[(nRows - 1) * nCols + (nCols - 1)] + u[(nRows - 1) * nCols + (nCols - 2)] + u[(nRows - 1) * nCols + (nCols - 1)]) / 4.0f - u[(nRows - 1) * nCols + (nCols - 1)];
-		v[(nRows - 1) * nCols + (nCols - 1)] *= 0.99f;
+		//v[(nRows - 1) * nCols + (nCols - 1)] *= 0.99f;
 		// Top edge less corners, bottom edge less corners
 		for (int j = 1; j < nCols - 1; j++)
 		{
 			v[j] += (u[j] + u[nCols + j] + u[j - 1] + u[j + 1]) / 4.0f - u[j];
 			v[j] *= 0.99f;
 			v[(nRows - 1) * nCols + j] += (u[(nRows - 2) * nCols + j] + u[(nRows - 1) * nCols + j] + u[(nRows - 1) * nCols + (j - 1)] + u[(nRows - 1) * nCols + (j + 1)]) / 4.0f - u[(nRows - 1) * nCols + j];
-			v[(nRows - 1) * nCols + j] *= 0.99f;
+			//v[(nRows - 1) * nCols + j] *= 0.99f;
 		}
 		// Left edge less corners, right edge less corners
 		for (int i = 1; i < nRows - 1; i++)
 		{
 			v[i * nCols] += (u[(i - 1) * nCols] + u[(i + 1) * nCols] + u[i * nCols] + u[i * nCols + 1]) / 4.0f - u[i * nCols];
-			v[i * nCols] *= 0.99f;
+			//v[i * nCols] *= 0.99f;
 			v[i * nCols + (nCols - 1)] += (u[(i - 1) * nCols + (nCols - 1)] + u[(i + 1) * nCols + (nCols - 1)] + u[i * nCols + (nCols - 2)] + u[i * nCols + (nCols - 1)]) / 4.0f - u[i * nCols + (nCols - 1)];
-			v[i * nCols + (nCols - 1)] *= 0.99f;
+			//v[i * nCols + (nCols - 1)] *= 0.99f;
 		}
 		// END MIRROR BOUNDARY CONDITION
 
@@ -150,7 +150,7 @@ public:
 			for (int j = 1; j < nCols - 1; j++)
 			{
 				v[i * nCols + j] += (u[(i - 1) * nCols + j] + u[(i + 1) * nCols + j] + u[i * nCols + (j - 1)] + u[i * nCols + (j + 1)]) / 4.0f - u[i * nCols + j];
-				v[i * nCols + j] *= 0.99f; // dampen
+				//v[i * nCols + j] *= 0.99f; // dampen
 			}
 		}
 		//for (int i = 0; i < nRows; i++)
@@ -257,12 +257,14 @@ private:
 		int nRows = hField->getNRows();
 		int nCols = hField->getNCols();
 
+		if (GetKey(olc::Key::SPACE).bPressed) hField->setHeights(initialHeights); // reinitialize to perlin noise
+
 		for (int x = 0; x < nCols; x++)
 		{
 			for (int y = 0; y < nRows; y++)
 			{
-				int t = hField->getHeight(x,y) * 255.0f;
-				Draw(x, y, olc::Pixel(t, t, t));
+				int t = std::clamp(hField->getHeight(x,y) * 255.0f, 0.0f, 255.0f);
+				Draw(x, y, olc::Pixel(t/3, t/2, t));
 			}
 		}
 		hField->step(fElapsedTime);
@@ -273,7 +275,7 @@ private:
 int main()
 {
 	PixelFluidEngine demo;
-	if (demo.Construct(256, 256, 2, 2))
+	if (demo.Construct(256, 256, 3, 3))
 		demo.Start();
 
 	return 0;
