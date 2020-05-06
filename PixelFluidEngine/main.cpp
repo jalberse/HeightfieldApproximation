@@ -236,7 +236,8 @@ private:
 	
 	// perlin noise parameters
 	float* fNoiseSeed = nullptr;
-	int nOctaveCount = 8;
+	std::array<int, 8> nOctaves = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	int nOctaveIdx = 7;
 	float fScalingBias = 2.0f;
 
 	bool OnUserCreate() override
@@ -246,7 +247,7 @@ private:
 
 		// Populate initial conditions of PDE with perlin noise
 		initialHeights = new float[nRows * nCols];
-		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveCount, fScalingBias, initialHeights);
+		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaves[nOctaveIdx], fScalingBias, initialHeights);
 
 		hField = new HeightField(nRows, nCols, initialHeights);
 		return true;
@@ -258,10 +259,13 @@ private:
 		if (GetKey(olc::Key::SPACE).bPressed)
 		{
 			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
-			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveCount, fScalingBias, initialHeights);
+			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaves[nOctaveIdx], fScalingBias, initialHeights);
 			hField->setHeights(initialHeights); 
 			hField->zeroVelocities();
 		}
+
+		if (GetKey(olc::Key::P).bPressed) if (nOctaveIdx < nOctaves.size() - 1) nOctaveIdx++;
+		if (GetKey(olc::Key::O).bPressed) if (nOctaveIdx > 0) nOctaveIdx--;
 
 		for (int x = 0; x < nCols; x++)
 		{
@@ -279,7 +283,7 @@ private:
 int main()
 {
 	PixelFluidEngine demo;
-	if (demo.Construct(256, 256, 3, 3))
+	if (demo.Construct(512, 256, 3, 3))
 		demo.Start();
 
 	return 0;
