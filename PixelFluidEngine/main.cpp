@@ -102,11 +102,11 @@ public:
 		}
 	}
 
-	void setVelocities(float* velocities)
+	void zeroVelocities()
 	{
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
-			v[i] = velocities[i];
+			v[i] = 0;
 		}
 	}
 
@@ -231,6 +231,8 @@ public:
 private:
 	HeightField* hField = nullptr;
 	float* initialHeights = nullptr;
+	float nRows = 256;
+	float nCols = 256;
 	
 	// perlin noise parameters
 	float* fNoiseSeed = nullptr;
@@ -239,8 +241,6 @@ private:
 
 	bool OnUserCreate() override
 	{
-		int nRows = ScreenWidth();
-		int nCols = ScreenHeight();
 		fNoiseSeed = new float[nRows * nCols];
 		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 
@@ -254,10 +254,14 @@ private:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		int nRows = hField->getNRows();
-		int nCols = hField->getNCols();
-
-		if (GetKey(olc::Key::SPACE).bPressed) hField->setHeights(initialHeights); // reinitialize to perlin noise
+		// Reset heights to perlin noise with new random seed
+		if (GetKey(olc::Key::SPACE).bPressed)
+		{
+			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
+			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveCount, fScalingBias, initialHeights);
+			hField->setHeights(initialHeights); 
+			hField->zeroVelocities();
+		}
 
 		for (int x = 0; x < nCols; x++)
 		{
