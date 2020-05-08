@@ -1,3 +1,39 @@
+/*
+	What is this?
+	~~~~~~~~~~~~~
+
+	The PixelFluidEngine is a tool for visualizing fluid simulation algorithms for computer graphics applications.
+	The PFE is built on top of the OneLoneCoder PixelGameEngine: https://github.com/OneLoneCoder/olcPixelGameEngine/wiki
+
+
+	LICENSE (GNU GPL-3.0-or-later)
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	Copyright 2020 John Alberse
+
+	This file is part of the PixelFluidEngine.
+
+	The PixelFluidEngine is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	The PixelFluidEngine is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with the PixelFluidEngine.  If not, see <https://www.gnu.org/licenses/>.
+
+
+	Author
+	~~~~~~
+
+	@author John Alberse
+	Contact: alberse.john@gmail.com
+*/
+
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
 
@@ -5,6 +41,7 @@
 
 
 // TODO: 
+// Why is, on octave 1, regens always increasing?
 // Buttons to set perlin parameters to be used when we reset to perlin
 // Toggle for dampening, and be able to set dampening term
 // Basic display/debug infor showing perlin params, etc
@@ -96,18 +133,12 @@ public:
 
 	void setHeights(float* heights)
 	{
-		for (int i = 0; i < (nRows * nCols); i++)
-		{
-			u[i] = heights[i];
-		}
+		for (int i = 0; i < (nRows * nCols); i++) u[i] = heights[i];
 	}
 
 	void zeroVelocities()
 	{
-		for (int i = 0; i < (nRows * nCols); i++)
-		{
-			v[i] = 0;
-		}
+		for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
 	}
 
 	void step(const float& fElapsedTime)
@@ -238,7 +269,9 @@ private:
 	float* fNoiseSeed = nullptr;
 	int nOctaveMax = 8;
 	int nOctave = 8;
+	float fScalingBiasMin = 0.2f;
 	float fScalingBias = 2.0f;
+	float fScalingBiasStep = 0.2f;
 
 	bool OnUserCreate() override
 	{
@@ -256,7 +289,7 @@ private:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		// Reset heights to perlin noise with new random seed
-		if (GetKey(olc::Key::SPACE).bPressed)
+		if (GetKey(olc::Key::SPACE).bReleased)
 		{
 			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
@@ -264,8 +297,11 @@ private:
 			hField->zeroVelocities();
 		}
 
-		if (GetKey(olc::Key::P).bPressed) (nOctave == nOctaveMax) ? nOctave = 1 : nOctave++;
-		if (GetKey(olc::Key::O).bPressed) (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
+		// Set various perlin noise params
+		if (GetKey(olc::Key::P).bReleased) (nOctave == nOctaveMax) ? nOctave = 1 : nOctave++;
+		if (GetKey(olc::Key::O).bReleased) (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
+		if (GetKey(olc::Key::L).bReleased) fScalingBias += fScalingBiasStep;
+		if (GetKey(olc::Key::K).bReleased) if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
 
 		Clear(olc::Pixel(0,0,0));
 
@@ -278,7 +314,8 @@ private:
 			}
 		}
 
-		DrawString(260, 10, std::to_string(nOctave));
+		DrawString(260, 10, "Octave [O,P]: " + std::to_string(nOctave));
+		DrawString(260, 30, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
 
 		hField->step(fElapsedTime);
 		return true;
