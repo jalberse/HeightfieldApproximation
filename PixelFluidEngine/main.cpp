@@ -11,7 +11,6 @@
 
 	Copyright 2020 John Alberse
 
-	This file is part of the PixelFluidEngine.
 
 	This software is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -41,9 +40,11 @@
 
 
 // TODO: 
-// Why is, on octave 1, regens always increasing?
-// Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
 // Move heightfield to its own file
+// Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
+	// Flag with perlin noise and thresholding
+	// Flag with right clicking
+// Why is, on octave 1, regens always increasing?
 // Toggle periodic boundary conditions vs mirror (?)
 // Different render modes for 2D - gradients, component velocities, etc?
 // Be able to render a 3D plane with pixelGameEngine
