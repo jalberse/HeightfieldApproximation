@@ -42,11 +42,9 @@
 
 // TODO: 
 // Why is, on octave 1, regens always increasing?
-// Buttons to set perlin parameters to be used when we reset to perlin
 // Toggle for dampening, and be able to set dampening term
-// Basic display/debug infor showing perlin params, etc
 // Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
-// Toggle periodic boundary conditions vs mirror
+// Toggle periodic boundary conditions vs mirror (?)
 // Click to interact with it (2D)
 // Different render modes for 2D - gradients, component velocities, etc?
 // Be able to render a 3D plane with pixelGameEngine
@@ -141,37 +139,37 @@ public:
 		for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
 	}
 
-	void step(const float& fElapsedTime)
+	void step(const float& fElapsedTime, const float& fDamp = 1.0f)
 	{
 		// BEGIN MIRROR BOUDNARY CONDITION
 		// Calculate new velocities - boundary cells
 		// Top left corner [0,0]
 		v[0] += (u[0] + u[(0 + 1) * nCols] + u[0] + u[1]) / 4.0f - u[0];
-		//v[0] *= 0.99f;
+		v[0] *= fDamp;
 		// Top right corner [0,nCols - 1]
 		v[nCols - 1] += (u[nCols - 1] + u[1 * nCols + (nCols - 1)] + u[nCols - 2] + u[nCols - 1]) / 4.0f - u[nCols - 1];
-		//v[nCols - 1] *= 0.99f;
+		v[nCols - 1] *= fDamp;
 		// Bottom left corner [nRows - 1, 0]
 		v[(nRows - 1) * nCols] += (u[(nRows - 2) * nCols] + u[(nRows - 1) * nCols] + u[(nRows - 1) * nCols] + u[(nRows - 1) * nCols + 1]) / 4.0f - u[(nRows - 1) * nCols];
-		//v[(nRows - 1) * nCols] *= 0.99f;
+		v[(nRows - 1) * nCols] *= fDamp;
 		// Bottom right corner [nRows - 1, nCols - 1]
 		v[(nRows - 1) * nCols + (nCols - 1)] += (u[(nRows - 2) * nCols + (nCols - 1)] + u[(nRows - 1) * nCols + (nCols - 1)] + u[(nRows - 1) * nCols + (nCols - 2)] + u[(nRows - 1) * nCols + (nCols - 1)]) / 4.0f - u[(nRows - 1) * nCols + (nCols - 1)];
-		//v[(nRows - 1) * nCols + (nCols - 1)] *= 0.99f;
+		v[(nRows - 1) * nCols + (nCols - 1)] *= fDamp;
 		// Top edge less corners, bottom edge less corners
 		for (int j = 1; j < nCols - 1; j++)
 		{
 			v[j] += (u[j] + u[nCols + j] + u[j - 1] + u[j + 1]) / 4.0f - u[j];
-			v[j] *= 0.99f;
+			v[j] *= fDamp;
 			v[(nRows - 1) * nCols + j] += (u[(nRows - 2) * nCols + j] + u[(nRows - 1) * nCols + j] + u[(nRows - 1) * nCols + (j - 1)] + u[(nRows - 1) * nCols + (j + 1)]) / 4.0f - u[(nRows - 1) * nCols + j];
-			//v[(nRows - 1) * nCols + j] *= 0.99f;
+			v[(nRows - 1) * nCols + j] *= fDamp;
 		}
 		// Left edge less corners, right edge less corners
 		for (int i = 1; i < nRows - 1; i++)
 		{
 			v[i * nCols] += (u[(i - 1) * nCols] + u[(i + 1) * nCols] + u[i * nCols] + u[i * nCols + 1]) / 4.0f - u[i * nCols];
-			//v[i * nCols] *= 0.99f;
+			v[i * nCols] *= fDamp;
 			v[i * nCols + (nCols - 1)] += (u[(i - 1) * nCols + (nCols - 1)] + u[(i + 1) * nCols + (nCols - 1)] + u[i * nCols + (nCols - 2)] + u[i * nCols + (nCols - 1)]) / 4.0f - u[i * nCols + (nCols - 1)];
-			//v[i * nCols + (nCols - 1)] *= 0.99f;
+			v[i * nCols + (nCols - 1)] *= fDamp;
 		}
 		// END MIRROR BOUNDARY CONDITION
 
@@ -181,7 +179,7 @@ public:
 			for (int j = 1; j < nCols - 1; j++)
 			{
 				v[i * nCols + j] += (u[(i - 1) * nCols + j] + u[(i + 1) * nCols + j] + u[i * nCols + (j - 1)] + u[i * nCols + (j + 1)]) / 4.0f - u[i * nCols + j];
-				//v[i * nCols + j] *= 0.99f; // dampen
+				v[i * nCols + j] *= fDamp; // dampen
 			}
 		}
 		//for (int i = 0; i < nRows; i++)
@@ -189,7 +187,7 @@ public:
 		//	for (int j = 1; j < nCols; j++)
 		//	{
 		//		v[i * nCols + j] += getVelocityChange(i, j);
-		//		v[i * nCols + j] *= 0.99f; // dampen
+		//		v[i * nCols + j] *= damp; // dampen
 		//	}
 		//}
 		// Update heights based on new velocities
@@ -272,6 +270,10 @@ private:
 	float fScalingBiasMin = 0.2f;
 	float fScalingBias = 2.0f;
 	float fScalingBiasStep = 0.2f;
+	float fDampMax = 1.0f;
+	float fDamp = 1.0f;
+	float fDampMin = 0.98f;
+	float fDampStep = 0.005;
 
 	bool OnUserCreate() override
 	{
@@ -302,6 +304,8 @@ private:
 		if (GetKey(olc::Key::O).bReleased) (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
 		if (GetKey(olc::Key::L).bReleased) fScalingBias += fScalingBiasStep;
 		if (GetKey(olc::Key::K).bReleased) if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
+		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
+		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
 
 		Clear(olc::Pixel(0,0,0));
 
@@ -316,8 +320,9 @@ private:
 
 		DrawString(260, 10, "Octave [O,P]: " + std::to_string(nOctave));
 		DrawString(260, 30, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
+		DrawString(260, 50, "Dampening [N,M]: " + std::to_string(fDamp));
 
-		hField->step(fElapsedTime);
+		hField->step(fElapsedTime, fDamp);
 		return true;
 	}
 };
