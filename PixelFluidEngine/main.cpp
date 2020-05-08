@@ -42,8 +42,8 @@
 
 // TODO: 
 // Why is, on octave 1, regens always increasing?
-// Toggle for dampening, and be able to set dampening term
 // Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
+// Move heightfield to its own file
 // Toggle periodic boundary conditions vs mirror (?)
 // Click to interact with it (2D)
 // Different render modes for 2D - gradients, component velocities, etc?
@@ -132,6 +132,11 @@ public:
 	void setHeights(float* heights)
 	{
 		for (int i = 0; i < (nRows * nCols); i++) u[i] = heights[i];
+	}
+
+	void setHeight(const int& x, const int& y, const float& fHeight)
+	{
+		u[y * nCols + x] = fHeight;
 	}
 
 	void zeroVelocities()
@@ -262,6 +267,8 @@ private:
 	float* initialHeights = nullptr;
 	float nRows = 256;
 	float nCols = 256;
+	int nMouseX;
+	int nMouseY;
 	
 	// perlin noise parameters
 	float* fNoiseSeed = nullptr;
@@ -273,7 +280,7 @@ private:
 	float fDampMax = 1.0f;
 	float fDamp = 1.0f;
 	float fDampMin = 0.98f;
-	float fDampStep = 0.005;
+	float fDampStep = 0.001;
 
 	bool OnUserCreate() override
 	{
@@ -307,6 +314,16 @@ private:
 		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
 		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
 
+		nMouseX = GetMouseX();
+		nMouseY = GetMouseY();
+		if (GetMouse(0).bHeld)
+		{
+			if (nMouseX >= 0 && nMouseX < nCols && nMouseY >= 0 && nMouseY < nRows)
+			{
+				hField->setHeight(nMouseX, nMouseY, 1.0f);
+			}
+		}
+
 		Clear(olc::Pixel(0,0,0));
 
 		for (int x = 0; x < nCols; x++)
@@ -318,9 +335,11 @@ private:
 			}
 		}
 
-		DrawString(260, 10, "Octave [O,P]: " + std::to_string(nOctave));
-		DrawString(260, 30, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
-		DrawString(260, 50, "Dampening [N,M]: " + std::to_string(fDamp));
+		DrawString(260, 10, "SPACE to reset");
+		DrawString(260, 30, "Click to perturb");
+		DrawString(260, 50, "Octave [O,P]: " + std::to_string(nOctave));
+		DrawString(260, 70, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
+		DrawString(260, 90, "Dampening [N,M]: " + std::to_string(fDamp));
 
 		hField->step(fElapsedTime, fDamp);
 		return true;
