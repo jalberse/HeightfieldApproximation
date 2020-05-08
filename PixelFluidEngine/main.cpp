@@ -2,8 +2,8 @@
 	What is this?
 	~~~~~~~~~~~~~
 
-	The PixelFluidEngine is a tool for visualizing fluid simulation algorithms for computer graphics applications.
-	The PFE is built on top of the OneLoneCoder PixelGameEngine: https://github.com/OneLoneCoder/olcPixelGameEngine/wiki
+	This software is a tool for visualizing fluid simulation algorithms for computer graphics applications.
+	This is built on top of the OneLoneCoder PixelGameEngine: https://github.com/OneLoneCoder/olcPixelGameEngine/wiki
 
 
 	LICENSE (GNU GPL-3.0-or-later)
@@ -13,18 +13,18 @@
 
 	This file is part of the PixelFluidEngine.
 
-	The PixelFluidEngine is free software: you can redistribute it and/or modify
+	This software is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation, either version 3 of the License, or
 	(at your option) any later version.
 
-	The PixelFluidEngine is distributed in the hope that it will be useful,
+	This software is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with the PixelFluidEngine.  If not, see <https://www.gnu.org/licenses/>.
+	along with this software.  If not, see <https://www.gnu.org/licenses/>.
 
 
 	Author
@@ -45,7 +45,6 @@
 // Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
 // Move heightfield to its own file
 // Toggle periodic boundary conditions vs mirror (?)
-// Click to interact with it (2D)
 // Different render modes for 2D - gradients, component velocities, etc?
 // Be able to render a 3D plane with pixelGameEngine
 // Render heightmap with pixelGameEngine (3D)
