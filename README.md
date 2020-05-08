@@ -1,6 +1,5 @@
-# PixelFluidEngine
+# Heightfield Approximation
 
-PixelFluidEngine is a tool to visualize fluid simulation algorithms for computer graphics applications. 
-It is built on top of the [PixelGameEngine](https://github.com/OneLoneCoder/olcPixelGameEngine/wiki/olc::PixelGameEngine).
+![gif of a build](media/interact.gif)
 
-The PixelFluidEngine is under active development. 
+An interactive visualization of the heightfield approximation algorithm for realtime fluid simulation, built on top of the [PixelGameEngine](https://github.com/OneLoneCoder/olcPixelGameEngine/wiki/olc::PixelGameEngine).
