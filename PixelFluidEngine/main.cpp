@@ -41,6 +41,9 @@
 
 // TODO: 
 // Move heightfield to its own file
+// Use perlin noise and thresholding to generate terrain
+// Set "height" of water by changing threshold on terrain
+// Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
 // Why is, on octave 1, regens always increasing?
 // Toggle periodic boundary conditions vs mirror (?)
 // Different render modes for 2D - gradients, component velocities, etc?
