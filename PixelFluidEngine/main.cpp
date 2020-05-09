@@ -107,8 +107,8 @@ public:
 	{
 		nRows = rows;
 		nCols = cols;
-		u = new float[nRows * nCols];
-		v = new float[nRows * nCols];
+		u = new float[(int)nRows * (int)nCols];
+		v = new float[(int)nRows * (int)nCols];
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
 			u[i] = 1.0f;
@@ -120,8 +120,8 @@ public:
 	{
 		nRows = rows;
 		nCols = cols;
-		u = new float[nRows*nCols];
-		v = new float[nRows*nCols];
+		u = new float[(int)nRows*(int)nCols];
+		v = new float[(int)nRows*(int)nCols];
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
 			u[i] = heights[i];
@@ -224,6 +224,11 @@ private:
 	float nCols = 256;
 	int nMouseX;
 	int nMouseY;
+	bool paused = false;
+	float fDampMax = 1.0f;
+	float fDamp = 1.0f;
+	float fDampMin = 0.98f;
+	float fDampStep = 0.001;
 	
 	// perlin noise parameters
 	float* fNoiseSeed = nullptr;
@@ -232,10 +237,7 @@ private:
 	float fScalingBiasMin = 0.2f;
 	float fScalingBias = 2.0f;
 	float fScalingBiasStep = 0.2f;
-	float fDampMax = 1.0f;
-	float fDamp = 1.0f;
-	float fDampMin = 0.98f;
-	float fDampStep = 0.001;
+	
 
 	bool OnUserCreate() override
 	{
@@ -253,7 +255,7 @@ private:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		// Reset heights to perlin noise with new random seed
-		if (GetKey(olc::Key::SPACE).bReleased)
+		if (GetKey(olc::Key::R).bReleased)
 		{
 			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
@@ -268,6 +270,7 @@ private:
 		if (GetKey(olc::Key::K).bReleased) if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
 		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
 		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
+		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
 
 		nMouseX = GetMouseX();
 		nMouseY = GetMouseY();
@@ -290,13 +293,15 @@ private:
 			}
 		}
 
-		DrawString(260, 10, "SPACE to reset");
+		DrawString(260, 10, "SPACE to pause");
 		DrawString(260, 30, "Click to perturb");
-		DrawString(260, 50, "Octave [O,P]: " + std::to_string(nOctave));
-		DrawString(260, 70, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
-		DrawString(260, 90, "Dampening [N,M]: " + std::to_string(fDamp));
+		DrawString(260, 50, "R to reset");
+		DrawString(260, 70, "Octave [O,P]: " + std::to_string(nOctave));
+		DrawString(260, 90, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
+		DrawString(260, 110, "Dampening [N,M]: " + std::to_string(fDamp));
 
-		hField->step(fElapsedTime, fDamp);
+		if (!paused) hField->step(fElapsedTime, fDamp);
+		
 		return true;
 	}
 };
