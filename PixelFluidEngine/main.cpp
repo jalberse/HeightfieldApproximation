@@ -146,55 +146,15 @@ public:
 
 	void step(const float& fElapsedTime, const float& fDamp = 1.0f)
 	{
-		// BEGIN MIRROR BOUDNARY CONDITION
-		// Calculate new velocities - boundary cells
-		// Top left corner [0,0]
-		v[0] += (u[0] + u[(0 + 1) * nCols] + u[0] + u[1]) / 4.0f - u[0];
-		v[0] *= fDamp;
-		// Top right corner [0,nCols - 1]
-		v[nCols - 1] += (u[nCols - 1] + u[1 * nCols + (nCols - 1)] + u[nCols - 2] + u[nCols - 1]) / 4.0f - u[nCols - 1];
-		v[nCols - 1] *= fDamp;
-		// Bottom left corner [nRows - 1, 0]
-		v[(nRows - 1) * nCols] += (u[(nRows - 2) * nCols] + u[(nRows - 1) * nCols] + u[(nRows - 1) * nCols] + u[(nRows - 1) * nCols + 1]) / 4.0f - u[(nRows - 1) * nCols];
-		v[(nRows - 1) * nCols] *= fDamp;
-		// Bottom right corner [nRows - 1, nCols - 1]
-		v[(nRows - 1) * nCols + (nCols - 1)] += (u[(nRows - 2) * nCols + (nCols - 1)] + u[(nRows - 1) * nCols + (nCols - 1)] + u[(nRows - 1) * nCols + (nCols - 2)] + u[(nRows - 1) * nCols + (nCols - 1)]) / 4.0f - u[(nRows - 1) * nCols + (nCols - 1)];
-		v[(nRows - 1) * nCols + (nCols - 1)] *= fDamp;
-		// Top edge less corners, bottom edge less corners
-		for (int j = 1; j < nCols - 1; j++)
-		{
-			v[j] += (u[j] + u[nCols + j] + u[j - 1] + u[j + 1]) / 4.0f - u[j];
-			v[j] *= fDamp;
-			v[(nRows - 1) * nCols + j] += (u[(nRows - 2) * nCols + j] + u[(nRows - 1) * nCols + j] + u[(nRows - 1) * nCols + (j - 1)] + u[(nRows - 1) * nCols + (j + 1)]) / 4.0f - u[(nRows - 1) * nCols + j];
-			v[(nRows - 1) * nCols + j] *= fDamp;
-		}
-		// Left edge less corners, right edge less corners
-		for (int i = 1; i < nRows - 1; i++)
-		{
-			v[i * nCols] += (u[(i - 1) * nCols] + u[(i + 1) * nCols] + u[i * nCols] + u[i * nCols + 1]) / 4.0f - u[i * nCols];
-			v[i * nCols] *= fDamp;
-			v[i * nCols + (nCols - 1)] += (u[(i - 1) * nCols + (nCols - 1)] + u[(i + 1) * nCols + (nCols - 1)] + u[i * nCols + (nCols - 2)] + u[i * nCols + (nCols - 1)]) / 4.0f - u[i * nCols + (nCols - 1)];
-			v[i * nCols + (nCols - 1)] *= fDamp;
-		}
-		// END MIRROR BOUNDARY CONDITION
-
-		// Calculate new velocities - internal cells
+		// Calculate new velocities
 		for (int i = 1; i < nRows - 1; i++)
 		{
 			for (int j = 1; j < nCols - 1; j++)
 			{
-				v[i * nCols + j] += (u[(i - 1) * nCols + j] + u[(i + 1) * nCols + j] + u[i * nCols + (j - 1)] + u[i * nCols + (j + 1)]) / 4.0f - u[i * nCols + j];
+				v[i * nCols + j] += getVelocityChange(j, i);
 				v[i * nCols + j] *= fDamp; // dampen
 			}
 		}
-		//for (int i = 0; i < nRows; i++)
-		//{
-		//	for (int j = 1; j < nCols; j++)
-		//	{
-		//		v[i * nCols + j] += getVelocityChange(i, j);
-		//		v[i * nCols + j] *= damp; // dampen
-		//	}
-		//}
 		// Update heights based on new velocities
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
@@ -224,30 +184,25 @@ private:
 	float* v = nullptr; // velocity matrix, flattened
 	float* u = nullptr; // height matrix, flattened
 
-	// Removed for now because slower by doing checks on internal cells;
-	// However leaving in because in the future we may want to do arbitrary domain;
-	// in which case we will have to check if neighbors are in or out of bounds! 
-	// (which we can do by having another matrix of flags, or bitpacked flags in a smaller array if we really want)
-	//float getVelocityChange(const int& i, const int& j)
-	//{
-	//	
-	//	float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
+	float getVelocityChange(const int& x, const int& y)
+	{
+		
+		float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
 
-	//	// Mirrored boundary conditions
-	//	// TODO can improve performance drastically here by putting this all in line manually so we don't check indices for all internal ones
-	//	if (i == 0) northHeight = u[j];
-	//	else northHeight = u[(i - 1) * nCols + j];
-	//	if (i == nRows - 1) southHeight = u[i * nCols + j];
-	//	else southHeight = u[(i + 1) * nCols + j];
-	//	if (j == 0) westHeight = u[i * nCols + j];
-	//	else westHeight = u[i * nCols + (j - 1)];
-	//	if (j == nCols - 1) eastHeight = u[i * nCols + j];
-	//	else eastHeight = u[i * nCols + (j + 1)];
+		// Mirrored boundary conditions
+		if (y == 0) northHeight = u[x];
+		else northHeight = u[(y - 1) * nCols + x];
+		if (y == nRows - 1) southHeight = u[y * nCols + x];
+		else southHeight = u[(y + 1) * nCols + x];
+		if (x == 0) westHeight = u[y * nCols + x];
+		else westHeight = u[y * nCols + (x - 1)];
+		if (x == nCols - 1) eastHeight = u[y * nCols + x];
+		else eastHeight = u[y * nCols + (x + 1)];
 
-	//	float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - u[i * nCols + j];
+		float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - u[y * nCols + x];
 
-	//	return result;
-	//}
+		return result;
+	}
 };
 
 
