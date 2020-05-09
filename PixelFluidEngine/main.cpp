@@ -105,43 +105,56 @@ class HeightField
 public:
 	HeightField(int rows, int cols)
 	{
+		/*
+			Creates a rectangular uniform heightfield with no internal restrictions on domain
+		*/
 		nRows = rows;
 		nCols = cols;
-		u = new float[(int)nRows * (int)nCols];
-		v = new float[(int)nRows * (int)nCols];
+		u = new float[nRows * nCols];
+		v = new float[nRows * nCols];
+		bDomain = new bool[nRows * nCols];
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
 			u[i] = 1.0f;
 			v[i] = 0;
+			bDomain[i] = true;
 		}
+		
 	}
 
 	HeightField(int rows, int cols, float* heights)
 	{
 		nRows = rows;
 		nCols = cols;
-		u = new float[(int)nRows*(int)nCols];
-		v = new float[(int)nRows*(int)nCols];
+		u = new float[nRows*nCols];
+		v = new float[nRows*nCols];
+		bDomain = new bool[nRows * nCols];
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
 			u[i] = heights[i];
 			v[i] = 0;
+			bDomain[i] = true;
+		}
+	}
+
+	HeightField(int rows, int cols, float* heights, bool* domain)
+	{
+		nRows = rows;
+		nCols = cols;
+		u = new float[nRows * nCols];
+		v = new float[nRows * nCols];
+		bDomain = new bool[nRows * nCols];
+		for (int i = 0; i < (nRows * nCols); i++)
+		{
+			u[i] = heights[i];
+			v[i] = 0;
+			bDomain[i] = domain[i];
 		}
 	}
 
 	void setHeights(float* heights)
 	{
 		for (int i = 0; i < (nRows * nCols); i++) u[i] = heights[i];
-	}
-
-	void setHeight(const int& x, const int& y, const float& fHeight)
-	{
-		u[y * nCols + x] = fHeight;
-	}
-
-	void zeroVelocities()
-	{
-		for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
 	}
 
 	void step(const float& fElapsedTime, const float& fDamp = 1.0f)
@@ -163,6 +176,26 @@ public:
 		}
 	}
 
+	void setHeight(const int& x, const int& y, const float& fHeight)
+	{
+		u[y * nCols + x] = fHeight;
+	}
+
+	void setDomain(bool* domain)
+	{
+		for (int i = 0; i < nRows * nCols; i++) bDomain = domain;
+	}
+
+	void setDomainCell(const int& x, const int& y, const bool& b)
+	{
+		if (x >= 0 && x < nCols && y >= 0 && y < nRows) bDomain[y * nCols + x] = b;
+	}
+
+	void zeroVelocities()
+	{
+		for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
+	}
+
 	float getHeight(const int& x, const int& y)
 	{
 		return u[y * nCols + x];
@@ -178,11 +211,18 @@ public:
 		return nRows;
 	}
 
+	bool isInDomain(const int& x, const int& y)
+	{
+		if (x < 0 || x >= nCols || y < 0 || y >= nRows) return false;
+		return bDomain[y * nCols + x];
+	}
+
 private:
 	int nRows;
 	int nCols;
 	float* v = nullptr; // velocity matrix, flattened
 	float* u = nullptr; // height matrix, flattened
+	bool* bDomain = nullptr; // bool representing fluid domain; 1 if can flow, 0 if not 
 
 	float getVelocityChange(const int& x, const int& y)
 	{
@@ -190,13 +230,13 @@ private:
 		float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
 
 		// Mirrored boundary conditions
-		if (y == 0) northHeight = u[x];
-		else northHeight = u[(y - 1) * nCols + x];
-		if (y == nRows - 1) southHeight = u[y * nCols + x];
+		if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = u[x];
+		else northHeight = u[(y - 1) * nCols + x]; 
+		if (y == nRows - 1 || !bDomain[(y+1) * nCols + x]) southHeight = u[y * nCols + x];
 		else southHeight = u[(y + 1) * nCols + x];
-		if (x == 0) westHeight = u[y * nCols + x];
+		if (x == 0 || !bDomain[y * nCols + (x - 1)]) westHeight = u[y * nCols + x];
 		else westHeight = u[y * nCols + (x - 1)];
-		if (x == nCols - 1) eastHeight = u[y * nCols + x];
+		if (x == nCols - 1 || !bDomain[y * nCols + (x + 1)]) eastHeight = u[y * nCols + x];
 		else eastHeight = u[y * nCols + (x + 1)];
 
 		float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - u[y * nCols + x];
@@ -281,6 +321,13 @@ private:
 				hField->setHeight(nMouseX, nMouseY, 1.0f);
 			}
 		}
+		if (GetMouse(1).bHeld)
+		{
+			if (nMouseX >= 0 && nMouseX < nCols && nMouseY >= 0 && nMouseY < nRows)
+			{
+				hField->setDomainCell(nMouseX, nMouseY, false);
+			}
+		}
 
 		Clear(olc::Pixel(0,0,0));
 
@@ -290,6 +337,8 @@ private:
 			{
 				int t = std::clamp(hField->getHeight(x,y) * 255.0f, 0.0f, 255.0f);
 				Draw(x, y, olc::Pixel(t/3, t/2, t));
+				if (!hField->isInDomain(x, y)) Draw(x, y, olc::Pixel(0, 0, 0));
+				
 			}
 		}
 
