@@ -41,9 +41,6 @@
 
 // TODO: 
 // Move heightfield to its own file
-// Be able to flag arbitrary cells as boundary cells and simulate arbitrary domains
-	// Flag with perlin noise and thresholding
-	// Flag with right clicking
 // Why is, on octave 1, regens always increasing?
 // Toggle periodic boundary conditions vs mirror (?)
 // Different render modes for 2D - gradients, component velocities, etc?
@@ -196,6 +193,11 @@ public:
 		for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
 	}
 
+	void clearDomain()
+	{
+		for (int i = 0; i < (nRows * nCols); i++) bDomain[i] = true;
+	}
+
 	float getHeight(const int& x, const int& y)
 	{
 		return u[y * nCols + x];
@@ -269,6 +271,7 @@ private:
 	float fDamp = 1.0f;
 	float fDampMin = 0.98f;
 	float fDampStep = 0.001;
+	bool bDomainModMode = false; // true if removing terrain (adding to fluid domain), false if removing terrain
 	
 	// perlin noise parameters
 	float* fNoiseSeed = nullptr;
@@ -294,13 +297,14 @@ private:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		// Reset heights to perlin noise with new random seed
+		// Reset heights to perlin noise with new random seed, and reset terrain
 		if (GetKey(olc::Key::R).bReleased)
 		{
 			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
 			hField->setHeights(initialHeights); 
 			hField->zeroVelocities();
+			hField->clearDomain();
 		}
 
 		// Set various perlin noise params
@@ -310,6 +314,7 @@ private:
 		if (GetKey(olc::Key::K).bReleased) if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
 		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
 		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
+		if (GetKey(olc::Key::T).bReleased) bDomainModMode = !bDomainModMode;
 		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
 
 		nMouseX = GetMouseX();
@@ -325,7 +330,7 @@ private:
 		{
 			if (nMouseX >= 0 && nMouseX < nCols && nMouseY >= 0 && nMouseY < nRows)
 			{
-				hField->setDomainCell(nMouseX, nMouseY, false);
+				hField->setDomainCell(nMouseX, nMouseY, bDomainModMode);
 			}
 		}
 
@@ -344,10 +349,13 @@ private:
 
 		DrawString(260, 10, "SPACE to pause");
 		DrawString(260, 30, "Click to perturb");
-		DrawString(260, 50, "R to reset");
-		DrawString(260, 70, "Octave [O,P]: " + std::to_string(nOctave));
-		DrawString(260, 90, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
-		DrawString(260, 110, "Dampening [N,M]: " + std::to_string(fDamp));
+		if (!bDomainModMode) DrawString(260, 50, "RClick to add terrain");
+		else DrawString(260, 50, "RClick to remove terrain");
+		DrawString(260, 70, "(T to toggle terrain mode)");
+		DrawString(260, 90, "R to reset");
+		DrawString(260, 110, "Octave [O,P]: " + std::to_string(nOctave));
+		DrawString(260, 130, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
+		DrawString(260, 150, "Dampening [N,M]: " + std::to_string(fDamp));
 
 		if (!paused) hField->step(fElapsedTime, fDamp);
 		
