@@ -293,7 +293,7 @@ private:
 	float fFluidLevel = 0.5f; 
 	float fFluidLevelStep = 0.05f;
 	float fFluidLevelMin = 0.1f;
-	float fFluidLevelMax = 0.95f;
+	float fFluidLevelMax = 1.0f;
 
 	bool OnUserCreate() override
 	{
@@ -350,7 +350,7 @@ private:
 		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
 		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
 		if (GetKey(olc::Key::C).bReleased) hField->clearDomain();
-		if (GetKey(olc::Key::PERIOD).bHeld && paused) hField->step(fElapsedTime);
+		if (GetKey(olc::Key::S).bHeld && paused) hField->step(fElapsedTime);
 
 		nMouseX = GetMouseX();
 		nMouseY = GetMouseY();
@@ -400,7 +400,7 @@ private:
 	{
 		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveTerrain, fScalingBiasTerrain, fTerrain);
-		for (int i = 0; i < nRows * nCols; i++) hField->setDomainCell(i % nCols, i / nCols, fTerrain[i] > fFluidLevel);
+		for (int i = 0; i < nRows * nCols; i++) hField->setDomainCell(i % nCols, i / nCols, fTerrain[i] < fFluidLevel);
 	}
 };
 

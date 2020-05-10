@@ -22,4 +22,4 @@ Currently, this visualization represents the heightfield in 2D, however it is po
 | Decrease/Increase perlin scaling Bias | K/L | 
 | Decrease/Increase perlin octave (terrain) | Shift + O/P |
 | Decrease/Increase perlin scaling bias (Terrain) | Shift + K/L |
-| Advance Simulation (while paused) | . |
+| Advance Simulation (while paused) | S |
