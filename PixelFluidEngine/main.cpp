@@ -41,8 +41,8 @@
 
 // TODO: 
 // Move heightfield to its own file
-// Use perlin noise and thresholding to generate terrain
 // Set "height" of water by changing threshold on terrain
+// A button to make it start/stop "raining" would be fun
 // Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
 // Why is, on octave 1, regens always increasing?
 // Toggle periodic boundary conditions vs mirror (?)
@@ -55,7 +55,7 @@
 void perlinNoise2D(int nRows, int nCols, float* fSeed, int nOctaves, float fBias, float* fOutput)
 {
 	/*
-	Populates the array fOutput, which is a flattened matrix of size nRows x nCols, with 2D perlin noise
+	Populates the array fOutput, which is a flattened matrix of size nRows x nCols, with 2D perlin noise [0,1]
 	fSeed should also be a flattened matrix of size nRows x nCols, populated with random noise
 	
 	Made referencing Javidx9's Perlin source under the GNU GPLv3 license:
@@ -235,7 +235,7 @@ private:
 		float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
 
 		// Mirrored boundary conditions
-		if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = u[x];
+		if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = u[y * nCols + x];
 		else northHeight = u[(y - 1) * nCols + x]; 
 		if (y == nRows - 1 || !bDomain[(y+1) * nCols + x]) southHeight = u[y * nCols + x];
 		else southHeight = u[(y + 1) * nCols + x];
@@ -251,7 +251,6 @@ private:
 };
 
 
-
 // Override base class with your custom functionality
 class PixelFluidEngine : public olc::PixelGameEngine
 {
@@ -265,8 +264,9 @@ public:
 private:
 	HeightField* hField = nullptr;
 	float* initialHeights = nullptr;
-	float nRows = 256;
-	float nCols = 256;
+	float* fTerrain = nullptr;
+	int nRows = 256;
+	int nCols = 256;
 	int nMouseX;
 	int nMouseY;
 	bool paused = false;
@@ -274,51 +274,81 @@ private:
 	float fDamp = 1.0f;
 	float fDampMin = 0.98f;
 	float fDampStep = 0.001;
-	bool bDomainModMode = false; // true if removing terrain (adding to fluid domain), false if removing terrain
 	
-	// perlin noise parameters
+	// perlin noise parameters - water
 	float* fNoiseSeed = nullptr;
 	int nOctaveMax = 8;
 	int nOctave = 8;
 	float fScalingBiasMin = 0.2f;
 	float fScalingBias = 2.0f;
 	float fScalingBiasStep = 0.2f;
+
+	// perlin noise parameters - terrain
+	int nOctaveTerrain = 4;
+	int fScalingBiasTerrain = 2.0f;
 	
+	// Used to theshold terrain to generate domain of water
+	// If terrain is above the fluid level, we take it out of the domain
+	// If the terrain is below the fluid level, it is in the domain
+	float fFluidLevel = 0.5f; 
+	float fFluidLevelStep = 0.05f;
+	float fFluidLevelMin = 0.1f;
+	float fFluidLevelMax = 0.95f;
 
 	bool OnUserCreate() override
 	{
 		fNoiseSeed = new float[nRows * nCols];
-		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
+		initialHeights = new float[nRows * nCols];
 
 		// Populate initial conditions of PDE with perlin noise
-		initialHeights = new float[nRows * nCols];
+		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
-
+		
 		hField = new HeightField(nRows, nCols, initialHeights);
+
+		// Generate some initial terrain and use it to set domain of heightfield
+		fTerrain = new float[nRows * nCols];
+		generateNewTerrain();
+
 		return true;
 	}
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		// Reset heights to perlin noise with new random seed, and reset terrain
+		// Reset heights to perlin noise with new random seed
 		if (GetKey(olc::Key::R).bReleased)
 		{
+			if (GetKey(olc::Key::SHIFT).bHeld) generateNewTerrain();
 			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
-			hField->setHeights(initialHeights); 
+			hField->setHeights(initialHeights);
 			hField->zeroVelocities();
-			hField->clearDomain();
 		}
-
 		// Set various perlin noise params
-		if (GetKey(olc::Key::P).bReleased) (nOctave == nOctaveMax) ? nOctave = 1 : nOctave++;
-		if (GetKey(olc::Key::O).bReleased) (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
-		if (GetKey(olc::Key::L).bReleased) fScalingBias += fScalingBiasStep;
-		if (GetKey(olc::Key::K).bReleased) if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
+		if (GetKey(olc::Key::P).bReleased) {
+			if (GetKey(olc::Key::SHIFT).bHeld) (nOctaveTerrain == nOctaveMax) ? nOctaveTerrain = 1 : nOctaveTerrain++;
+			else (nOctave == nOctaveMax) ? nOctave = 1 : nOctave++;
+		}
+		if (GetKey(olc::Key::O).bReleased) 
+		{
+			if (GetKey(olc::Key::SHIFT).bHeld) (nOctaveTerrain == 1) ? nOctaveTerrain = nOctaveMax : nOctaveTerrain--;
+			else (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
+		}
+		if (GetKey(olc::Key::L).bReleased)
+		{
+			if (GetKey(olc::Key::SHIFT).bHeld) fScalingBiasTerrain += fScalingBiasStep;
+			else fScalingBias += fScalingBiasStep;
+		}
+		if (GetKey(olc::Key::K).bReleased)
+		{
+			if (GetKey(olc::Key::SHIFT).bHeld && fScalingBiasTerrain >= fScalingBiasMin + fScalingBiasStep) fScalingBiasTerrain -= fScalingBiasStep;
+			else if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
+		}
 		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
 		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
-		if (GetKey(olc::Key::T).bReleased) bDomainModMode = !bDomainModMode;
 		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
+		if (GetKey(olc::Key::C).bReleased) hField->clearDomain();
+		// TODO a button to advance a single step if paused
 
 		nMouseX = GetMouseX();
 		nMouseY = GetMouseY();
@@ -333,7 +363,7 @@ private:
 		{
 			if (nMouseX >= 0 && nMouseX < nCols && nMouseY >= 0 && nMouseY < nRows)
 			{
-				hField->setDomainCell(nMouseX, nMouseY, bDomainModMode);
+				hField->setDomainCell(nMouseX, nMouseY, GetKey(olc::Key::SHIFT).bHeld);
 			}
 		}
 
@@ -350,26 +380,31 @@ private:
 			}
 		}
 
-		DrawString(260, 10, "SPACE to pause");
-		DrawString(260, 30, "Click to perturb");
-		if (!bDomainModMode) DrawString(260, 50, "RClick to add terrain");
-		else DrawString(260, 50, "RClick to remove terrain");
-		DrawString(260, 70, "(T to toggle terrain mode)");
-		DrawString(260, 90, "R to reset");
-		DrawString(260, 110, "Octave [O,P]: " + std::to_string(nOctave));
-		DrawString(260, 130, "Scaling Bias [K,L]: " + std::to_string(fScalingBias));
-		DrawString(260, 150, "Dampening [N,M]: " + std::to_string(fDamp));
-
+		DrawString(260, 70, "Dampening      : " + std::to_string(fDamp));
+		DrawString(260, 90, "Fluid Perlin Parameters");
+		DrawString(260, 110, "  Octave       : " + std::to_string(nOctave));
+		DrawString(260, 130, "  Scaling Bias : " + std::to_string(fScalingBias));
+		DrawString(260, 150, "Terrain Perlin Parameters");
+		DrawString(260, 170, "  Octave       : " + std::to_string(nOctaveTerrain));
+		DrawString(260, 190, "  Scaling Bias : " + std::to_string(fScalingBiasTerrain));
+		
 		if (!paused) hField->step(fElapsedTime, fDamp);
 		
 		return true;
+	}
+
+	void generateNewTerrain()
+	{
+		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
+		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveTerrain, fScalingBiasTerrain, fTerrain);
+		for (int i = 0; i < nRows * nCols; i++) hField->setDomainCell(i % nCols, i / nCols, fTerrain[i] > fFluidLevel);
 	}
 };
 
 int main()
 {
 	PixelFluidEngine demo;
-	if (demo.Construct(512, 256, 3, 3))
+	if (demo.Construct(512, 256, 2, 2))
 		demo.Start();
 
 	return 0;
