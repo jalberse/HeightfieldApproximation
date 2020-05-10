@@ -348,7 +348,7 @@ private:
 		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
 		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
 		if (GetKey(olc::Key::C).bReleased) hField->clearDomain();
-		// TODO a button to advance a single step if paused
+		if (GetKey(olc::Key::PERIOD).bHeld && paused) hField->step(fElapsedTime);
 
 		nMouseX = GetMouseX();
 		nMouseY = GetMouseY();
@@ -380,6 +380,7 @@ private:
 			}
 		}
 
+		DrawString(260, 50, "Fluid level    : " + std::to_string(fFluidLevel));
 		DrawString(260, 70, "Dampening      : " + std::to_string(fDamp));
 		DrawString(260, 90, "Fluid Perlin Parameters");
 		DrawString(260, 110, "  Octave       : " + std::to_string(nOctave));
