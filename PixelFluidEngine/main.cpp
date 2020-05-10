@@ -170,7 +170,6 @@ public:
 		// Update heights based on new velocities
 		for (int i = 0; i < (nRows * nCols); i++)
 		{
-			// u[i] += v[i]; // This gives more extreme and visually interesting results but is unphysical.
 			u[i] += v[i] * fElapsedTime;
 		}
 	}
@@ -315,6 +314,28 @@ private:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
+		handleInput(fElapsedTime);
+
+		Clear(olc::Pixel(0,0,0));
+		for (int x = 0; x < nCols; x++)
+		{
+			for (int y = 0; y < nRows; y++)
+			{
+				int t = std::clamp(hField->getHeight(x,y) * 255.0f, 0.0f, 255.0f);
+				Draw(x, y, olc::Pixel(t/3, t/2, t));
+				if (!hField->isInDomain(x, y)) Draw(x, y, olc::Pixel(0, 0, 0));
+				
+			}
+		}
+		drawUI();
+		
+		if (!paused) hField->step(fElapsedTime, fDamp);
+		
+		return true;
+	}
+
+	void handleInput(float fElapsedTime)
+	{
 		// Reset heights to perlin noise with new random seed
 		if (GetKey(olc::Key::R).bReleased)
 		{
@@ -326,7 +347,7 @@ private:
 			fFluidLevel += fFluidLevelStep;
 			applyTerrain();
 			generateFluidSurface(); applyFluidSurface();
-			
+
 		}
 		if (GetKey(olc::Key::Z).bReleased && fFluidLevel - fFluidLevelStep >= fFluidLevelMin)
 		{
@@ -339,7 +360,7 @@ private:
 			if (GetKey(olc::Key::SHIFT).bHeld) (nOctaveTerrain == nOctaveMax) ? nOctaveTerrain = 1 : nOctaveTerrain++;
 			else (nOctave == nOctaveMax) ? nOctave = 1 : nOctave++;
 		}
-		if (GetKey(olc::Key::O).bReleased) 
+		if (GetKey(olc::Key::O).bReleased)
 		{
 			if (GetKey(olc::Key::SHIFT).bHeld) (nOctaveTerrain == 1) ? nOctaveTerrain = nOctaveMax : nOctaveTerrain--;
 			else (nOctave == 1) ? nOctave = nOctaveMax : nOctave--;
@@ -378,32 +399,18 @@ private:
 				hField->setDomainCell(nMouseX, nMouseY, GetKey(olc::Key::SHIFT).bHeld);
 			}
 		}
+	}
 
-		Clear(olc::Pixel(0,0,0));
-
-		for (int x = 0; x < nCols; x++)
-		{
-			for (int y = 0; y < nRows; y++)
-			{
-				int t = std::clamp(hField->getHeight(x,y) * 255.0f, 0.0f, 255.0f);
-				Draw(x, y, olc::Pixel(t/3, t/2, t));
-				if (!hField->isInDomain(x, y)) Draw(x, y, olc::Pixel(0, 0, 0));
-				
-			}
-		}
-
-		DrawString(260, 50, "Fluid level    : " + std::to_string(fFluidLevel));
-		DrawString(260, 70, "Dampening      : " + std::to_string(fDamp));
+	void drawUI()
+	{
+		DrawString(260, 50, "Dampening      : " + std::to_string(fDamp));
+		DrawString(260, 70, "Fluid level    : " + std::to_string(fFluidLevel));
 		DrawString(260, 90, "Fluid Perlin Parameters");
 		DrawString(260, 110, "  Octave       : " + std::to_string(nOctave));
 		DrawString(260, 130, "  Scaling Bias : " + std::to_string(fScalingBias));
 		DrawString(260, 150, "Terrain Perlin Parameters");
 		DrawString(260, 170, "  Octave       : " + std::to_string(nOctaveTerrain));
 		DrawString(260, 190, "  Scaling Bias : " + std::to_string(fScalingBiasTerrain));
-		
-		if (!paused) hField->step(fElapsedTime, fDamp);
-		
-		return true;
 	}
 
 	void generateTerrain()
