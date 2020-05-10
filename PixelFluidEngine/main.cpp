@@ -285,7 +285,7 @@ private:
 
 	// perlin noise parameters - terrain
 	int nOctaveTerrain = 4;
-	int fScalingBiasTerrain = 2.0f;
+	float fScalingBiasTerrain = 2.0f;
 	
 	// Used to theshold terrain to generate domain of water
 	// If terrain is above the fluid level, we take it out of the domain
@@ -341,7 +341,9 @@ private:
 		}
 		if (GetKey(olc::Key::K).bReleased)
 		{
-			if (GetKey(olc::Key::SHIFT).bHeld && fScalingBiasTerrain >= fScalingBiasMin + fScalingBiasStep) fScalingBiasTerrain -= fScalingBiasStep;
+			if (GetKey(olc::Key::SHIFT).bHeld) {
+				if (fScalingBiasTerrain >= fScalingBiasMin + fScalingBiasStep) fScalingBiasTerrain -= fScalingBiasStep;
+			}
 			else if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
 		}
 		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
