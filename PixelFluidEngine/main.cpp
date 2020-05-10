@@ -41,10 +41,9 @@
 
 // TODO: 
 // Move heightfield to its own file
-// Set "height" of water by changing threshold on terrain
+// Seems to be an off-by-one error near border where border cells aren't updating physically, but can if manually set. 
 // A button to make it start/stop "raining" would be fun
 // Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
-// Why is, on octave 1, regens always increasing?
 // Toggle periodic boundary conditions vs mirror (?)
 // Different render modes for 2D - gradients, component velocities, etc?
 // Be able to render a 3D plane with pixelGameEngine
@@ -271,7 +270,7 @@ private:
 	int nMouseY;
 	bool paused = false;
 	float fDampMax = 1.0f;
-	float fDamp = 1.0f;
+	float fDamp = 0.999f;
 	float fDampMin = 0.98f;
 	float fDampStep = 0.001;
 	
@@ -308,7 +307,8 @@ private:
 
 		// Generate some initial terrain and use it to set domain of heightfield
 		fTerrain = new float[nRows * nCols];
-		generateNewTerrain();
+		generateTerrain();
+		applyTerrain();
 
 		return true;
 	}
@@ -318,11 +318,21 @@ private:
 		// Reset heights to perlin noise with new random seed
 		if (GetKey(olc::Key::R).bReleased)
 		{
-			if (GetKey(olc::Key::SHIFT).bHeld) generateNewTerrain();
-			for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
-			perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
-			hField->setHeights(initialHeights);
-			hField->zeroVelocities();
+			if (GetKey(olc::Key::SHIFT).bHeld) generateTerrain(); applyTerrain();
+			generateFluidSurface(); applyFluidSurface();
+		}
+		if (GetKey(olc::Key::X).bReleased && fFluidLevel + fFluidLevelStep <= fFluidLevelMax)
+		{
+			fFluidLevel += fFluidLevelStep;
+			applyTerrain();
+			generateFluidSurface(); applyFluidSurface();
+			
+		}
+		if (GetKey(olc::Key::Z).bReleased && fFluidLevel - fFluidLevelStep >= fFluidLevelMin)
+		{
+			fFluidLevel -= fFluidLevelStep;
+			applyTerrain();
+			generateFluidSurface(); applyFluidSurface();
 		}
 		// Set various perlin noise params
 		if (GetKey(olc::Key::P).bReleased) {
@@ -396,11 +406,28 @@ private:
 		return true;
 	}
 
-	void generateNewTerrain()
+	void generateTerrain()
 	{
 		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
 		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctaveTerrain, fScalingBiasTerrain, fTerrain);
+		
+	}
+
+	void applyTerrain()
+	{
 		for (int i = 0; i < nRows * nCols; i++) hField->setDomainCell(i % nCols, i / nCols, fTerrain[i] < fFluidLevel);
+	}
+
+	void generateFluidSurface()
+	{
+		for (int i = 0; i < nRows * nCols; i++) fNoiseSeed[i] = (float)rand() / (float)RAND_MAX;
+		perlinNoise2D(nRows, nCols, fNoiseSeed, nOctave, fScalingBias, initialHeights);
+	}
+
+	void applyFluidSurface()
+	{
+		hField->setHeights(initialHeights);
+		hField->zeroVelocities();
 	}
 };
 
