@@ -41,7 +41,6 @@
 
 // TODO: 
 // Move heightfield to its own file
-// Seems to be an off-by-one error near border where border cells aren't updating physically, but can if manually set. 
 // A button to make it start/stop "raining" would be fun
 // Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
 // Toggle periodic boundary conditions vs mirror (?)
@@ -159,9 +158,9 @@ public:
 	void step(const float& fElapsedTime, const float& fDamp = 1.0f)
 	{
 		// Calculate new velocities
-		for (int i = 1; i < nRows - 1; i++)
+		for (int i = 0; i < nRows; i++)
 		{
-			for (int j = 1; j < nCols - 1; j++)
+			for (int j = 0; j < nCols; j++)
 			{
 				v[i * nCols + j] += getVelocityChange(j, i);
 				v[i * nCols + j] *= fDamp; // dampen
@@ -229,7 +228,6 @@ private:
 
 	float getVelocityChange(const int& x, const int& y)
 	{
-		
 		float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
 
 		// Mirrored boundary conditions
