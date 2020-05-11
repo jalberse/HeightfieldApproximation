@@ -441,7 +441,7 @@ private:
 int main()
 {
 	PixelFluidEngine demo;
-	if (demo.Construct(512, 256, 2, 2))
+	if (demo.Construct(1920 / 4, 1080 / 4, 3, 3))
 		demo.Start();
 
 	return 0;
