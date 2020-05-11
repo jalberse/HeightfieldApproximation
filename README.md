@@ -2,7 +2,11 @@
 
 ![gif of a build](media/interact.gif)
 
+![another gif of build](media/fluidsim-2.gif)
+
 An interactive visualization of the heightfield approximation algorithm for realtime fluid surface simulation over arbitrary domains, built on top of the [PixelGameEngine](https://github.com/OneLoneCoder/olcPixelGameEngine/wiki/olc::PixelGameEngine).
+
+
 
 Heightfield approximation is a computationally cheap and relatively simple method which gives surprisingly realistic looking results. In exchange, the approximation is unable to represent more complex phenomena such as breaking waves, splashing, and droplets. This makes the algorithm a good fit for real-time simulation of large bodies of fluid such as lakes or oceans. 
 
