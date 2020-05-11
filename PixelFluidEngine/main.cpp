@@ -337,7 +337,9 @@ private:
 		// Reset heights to perlin noise with new random seed
 		if (GetKey(olc::Key::R).bReleased)
 		{
-			if (GetKey(olc::Key::SHIFT).bHeld) generateTerrain(); applyTerrain();
+			if (GetKey(olc::Key::SHIFT).bHeld) {
+				generateTerrain(); applyTerrain();
+			}
 			generateFluidSurface(); applyFluidSurface();
 		}
 		if (GetKey(olc::Key::X).bReleased && fFluidLevel + fFluidLevelStep <= fFluidLevelMax)
