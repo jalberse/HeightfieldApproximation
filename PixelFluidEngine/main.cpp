@@ -30,6 +30,11 @@
 */
 
 #define OLC_PGE_APPLICATION
+
+
+#include "heightfield.cuh"
+
+#include "thrust/host_vector.h"
 #include "olcPixelGameEngine.h"
 
 #include <math.h>
