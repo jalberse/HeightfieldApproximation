@@ -29,5 +29,8 @@
     <ClInclude Include="HeightField.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerlinNoise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

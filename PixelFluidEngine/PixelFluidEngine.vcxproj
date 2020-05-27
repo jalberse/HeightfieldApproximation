@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClInclude Include="HeightField.h" />
     <ClInclude Include="olcPixelGameEngine.h" />
+    <ClInclude Include="PerlinNoise.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
