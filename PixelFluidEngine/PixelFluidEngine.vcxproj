@@ -145,14 +145,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="HeightField.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="heightfield.cuh" />
+    <ClInclude Include="HeightField.h" />
     <ClInclude Include="olcPixelGameEngine.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="heightfield.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

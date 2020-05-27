@@ -5,7 +5,6 @@
 	This software is a tool for visualizing fluid simulation algorithms for computer graphics applications.
 	This is built on top of the OneLoneCoder PixelGameEngine: https://github.com/OneLoneCoder/olcPixelGameEngine/wiki
 
-
 	LICENSE (MIT)
 	~~~~~~~~~~~~~
 	
@@ -32,16 +31,15 @@
 #define OLC_PGE_APPLICATION
 
 
-#include "heightfield.cuh"
+#include "HeightField.h"
 
-#include "thrust/host_vector.h"
 #include "olcPixelGameEngine.h"
 
 #include <math.h>
 
 
 // TODO: 
-// Move heightfield to its own file
+// GPU support
 // A button to make it start/stop "raining" would be fun
 // Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
 // Toggle periodic boundary conditions vs mirror (?)
@@ -93,160 +91,6 @@ void perlinNoise2D(int nRows, int nCols, float* fSeed, int nOctaves, float fBias
 		}
 	}
 }
-
-class HeightField
-	/*
-	Heightfield approximation of a fluid surface
-	See Sigraph 2007 course notes by Bridson and Muller-Fischer, Chapter 8:
-	https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf
-	*/
-{
-public:
-	HeightField(int rows, int cols)
-	{
-		/*
-			Creates a rectangular uniform heightfield with no internal restrictions on domain
-		*/
-		nRows = rows;
-		nCols = cols;
-		u = new float[nRows * nCols];
-		v = new float[nRows * nCols];
-		bDomain = new bool[nRows * nCols];
-		for (int i = 0; i < (nRows * nCols); i++)
-		{
-			u[i] = 1.0f;
-			v[i] = 0;
-			bDomain[i] = true;
-		}
-		
-	}
-
-	HeightField(int rows, int cols, float* heights)
-	{
-		nRows = rows;
-		nCols = cols;
-		u = new float[nRows*nCols];
-		v = new float[nRows*nCols];
-		bDomain = new bool[nRows * nCols];
-		for (int i = 0; i < (nRows * nCols); i++)
-		{
-			u[i] = heights[i];
-			v[i] = 0;
-			bDomain[i] = true;
-		}
-	}
-
-	HeightField(int rows, int cols, float* heights, bool* domain)
-	{
-		nRows = rows;
-		nCols = cols;
-		u = new float[nRows * nCols];
-		v = new float[nRows * nCols];
-		bDomain = new bool[nRows * nCols];
-		for (int i = 0; i < (nRows * nCols); i++)
-		{
-			u[i] = heights[i];
-			v[i] = 0;
-			bDomain[i] = domain[i];
-		}
-	}
-
-	void setHeights(float* heights)
-	{
-		for (int i = 0; i < (nRows * nCols); i++) u[i] = heights[i];
-	}
-
-	void step(const float& fElapsedTime, const float& fDamp = 1.0f)
-	{
-		// Calculate new velocities
-		for (int i = 0; i < nRows; i++)
-		{
-			for (int j = 0; j < nCols; j++)
-			{
-				v[i * nCols + j] += getVelocityChange(j, i);
-				v[i * nCols + j] *= fDamp; // dampen
-			}
-		}
-		// Update heights based on new velocities
-		for (int i = 0; i < (nRows * nCols); i++)
-		{
-			u[i] += v[i] * fElapsedTime;
-		}
-	}
-
-	void setHeight(const int& x, const int& y, const float& fHeight)
-	{
-		u[y * nCols + x] = fHeight;
-	}
-
-	void setDomain(bool* domain)
-	{
-		for (int i = 0; i < nRows * nCols; i++) bDomain = domain;
-	}
-
-	void setDomainCell(const int& x, const int& y, const bool& b)
-	{
-		if (x >= 0 && x < nCols && y >= 0 && y < nRows) bDomain[y * nCols + x] = b;
-	}
-
-	void zeroVelocities()
-	{
-		for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
-	}
-
-	void clearDomain()
-	{
-		for (int i = 0; i < (nRows * nCols); i++) bDomain[i] = true;
-	}
-
-	float getHeight(const int& x, const int& y)
-	{
-		return u[y * nCols + x];
-	}
-
-	int getNCols()
-	{
-		return nCols;
-	}
-
-	int getNRows()
-	{
-		return nRows;
-	}
-
-	bool isInDomain(const int& x, const int& y)
-	{
-		if (x < 0 || x >= nCols || y < 0 || y >= nRows) return false;
-		return bDomain[y * nCols + x];
-	}
-
-private:
-	int nRows;
-	int nCols;
-	float* v = nullptr; // velocity matrix, flattened
-	float* u = nullptr; // height matrix, flattened
-	bool* bDomain = nullptr; // bool representing fluid domain; 1 if can flow, 0 if not 
-
-	float getVelocityChange(const int& x, const int& y)
-	{
-		float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
-
-		// Mirrored boundary conditions
-		if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = u[y * nCols + x];
-		else northHeight = u[(y - 1) * nCols + x]; 
-		if (y == nRows - 1 || !bDomain[(y+1) * nCols + x]) southHeight = u[y * nCols + x];
-		else southHeight = u[(y + 1) * nCols + x];
-		if (x == 0 || !bDomain[y * nCols + (x - 1)]) westHeight = u[y * nCols + x];
-		else westHeight = u[y * nCols + (x - 1)];
-		if (x == nCols - 1 || !bDomain[y * nCols + (x + 1)]) eastHeight = u[y * nCols + x];
-		else eastHeight = u[y * nCols + (x + 1)];
-
-		float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - u[y * nCols + x];
-
-		return result;
-	}
-};
-
 
 // Override base class with your custom functionality
 class PixelFluidEngine : public olc::PixelGameEngine
