@@ -30,14 +30,12 @@
 
 #define OLC_PGE_APPLICATION
 
-
 #include "HeightField.h"
 #include "PerlinNoise.h"
 
 #include "olcPixelGameEngine.h"
 
 #include <math.h>
-
 
 // TODO: 
 // GPU support
@@ -120,7 +118,8 @@ private:
 		{
 			for (int y = 0; y < nRows; y++)
 			{
-				int t = std::clamp(hField->getHeight(x,y) * 255.0f, 0.0f, 255.0f);
+				float height = hField->getHeight(x, y) * 255.0f;
+				int t = height <= 0.0f ? 0.0f : height <= 255.0f ? height : 255.0f;
 				Draw(x, y, olc::Pixel(t/3, t/2, t));
 				if (!hField->isInDomain(x, y)) Draw(x, y, olc::Pixel(0, 0, 0));
 				

@@ -1,5 +1,8 @@
 #include "HeightField.h"
 
+#include "thrust/host_vector.h"
+#include "thrust/device_vector.h"
+
 HeightField::HeightField(int rows, int cols)
 {
 	/*
@@ -18,7 +21,7 @@ HeightField::HeightField(int rows, int cols)
 	}
 }
 
-HeightField::HeightField(int rows, int cols, float* heights)
+HeightField::HeightField(int rows, int cols, float* heights) 
 {
 	nRows = rows;
 	nCols = cols;

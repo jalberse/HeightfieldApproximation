@@ -1,5 +1,8 @@
 #pragma once
 
+#include "thrust/host_vector.h"
+#include "thrust/device_vector.h"
+
 class HeightField
 {
 	/*
@@ -28,6 +31,17 @@ public:
 private:
 	int nRows;
 	int nCols;
+
+	//thrust::host_vector<float> h_z;
+	/*
+	thrust::device_vector<float> d_z;
+	thrust::host_vector<float> h_dz;
+	thrust::device_vector<float> d_dz;
+	thrust::device_vector<float> d_ddz;
+	thrust::host_vector<bool> h_bDomain;
+	thrust::device_vector<bool> d_bDomain;
+	*/
+
 	float* dz = nullptr; // velocity matrix, flattened
 	float* z = nullptr; // height matrix, flattened
 	bool* bDomain = nullptr; // bool representing fluid domain; 1 if can flow, 0 if not 
