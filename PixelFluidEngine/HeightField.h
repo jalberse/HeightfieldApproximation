@@ -28,8 +28,8 @@ public:
 private:
 	int nRows;
 	int nCols;
-	float* v = nullptr; // velocity matrix, flattened
-	float* u = nullptr; // height matrix, flattened
+	float* dz = nullptr; // velocity matrix, flattened
+	float* z = nullptr; // height matrix, flattened
 	bool* bDomain = nullptr; // bool representing fluid domain; 1 if can flow, 0 if not 
 
 	float getVelocityChange(const int& x, const int& y);

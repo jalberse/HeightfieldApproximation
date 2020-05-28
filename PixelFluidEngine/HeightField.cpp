@@ -7,13 +7,13 @@ HeightField::HeightField(int rows, int cols)
 	*/
 	nRows = rows;
 	nCols = cols;
-	u = new float[nRows * nCols];
-	v = new float[nRows * nCols];
+	z = new float[nRows * nCols];
+	dz = new float[nRows * nCols];
 	bDomain = new bool[nRows * nCols];
 	for (int i = 0; i < (nRows * nCols); i++)
 	{
-		u[i] = 1.0f;
-		v[i] = 0;
+		z[i] = 1.0f;
+		dz[i] = 0;
 		bDomain[i] = true;
 	}
 }
@@ -22,13 +22,13 @@ HeightField::HeightField(int rows, int cols, float* heights)
 {
 	nRows = rows;
 	nCols = cols;
-	u = new float[nRows * nCols];
-	v = new float[nRows * nCols];
+	z = new float[nRows * nCols];
+	dz = new float[nRows * nCols];
 	bDomain = new bool[nRows * nCols];
 	for (int i = 0; i < (nRows * nCols); i++)
 	{
-		u[i] = heights[i];
-		v[i] = 0;
+		z[i] = heights[i];
+		dz[i] = 0;
 		bDomain[i] = true;
 	}
 }
@@ -37,20 +37,20 @@ HeightField::HeightField(int rows, int cols, float* heights, bool* domain)
 {
 	nRows = rows;
 	nCols = cols;
-	u = new float[nRows * nCols];
-	v = new float[nRows * nCols];
+	z = new float[nRows * nCols];
+	dz = new float[nRows * nCols];
 	bDomain = new bool[nRows * nCols];
 	for (int i = 0; i < (nRows * nCols); i++)
 	{
-		u[i] = heights[i];
-		v[i] = 0;
+		z[i] = heights[i];
+		dz[i] = 0;
 		bDomain[i] = domain[i];
 	}
 }
 
 void HeightField::setHeights(float* heights)
 {
-	for (int i = 0; i < (nRows * nCols); i++) u[i] = heights[i];
+	for (int i = 0; i < (nRows * nCols); i++) z[i] = heights[i];
 }
 
 void HeightField::step(const float& fElapsedTime, const float& fDamp)
@@ -60,20 +60,20 @@ void HeightField::step(const float& fElapsedTime, const float& fDamp)
 	{
 		for (int j = 0; j < nCols; j++)
 		{
-			v[i * nCols + j] += getVelocityChange(j, i);
-			v[i * nCols + j] *= fDamp; // dampen
+			dz[i * nCols + j] += getVelocityChange(j, i);
+			dz[i * nCols + j] *= fDamp; // dampen
 		}
 	}
 	// Update heights based on new velocities
 	for (int i = 0; i < (nRows * nCols); i++)
 	{
-		u[i] += v[i] * fElapsedTime;
+		z[i] += dz[i] * fElapsedTime;
 	}
 }
 
 void HeightField::setHeight(const int& x, const int& y, const float& fHeight)
 {
-	u[y * nCols + x] = fHeight;
+	z[y * nCols + x] = fHeight;
 }
 
 void HeightField::setDomain(bool* domain)
@@ -88,7 +88,7 @@ void HeightField::setDomainCell(const int& x, const int& y, const bool& b)
 
 void HeightField::zeroVelocities()
 {
-	for (int i = 0; i < (nRows * nCols); i++) v[i] = 0;
+	for (int i = 0; i < (nRows * nCols); i++) dz[i] = 0;
 }
 
 void HeightField::clearDomain()
@@ -98,7 +98,7 @@ void HeightField::clearDomain()
 
 float HeightField::getHeight(const int& x, const int& y)
 {
-	return u[y * nCols + x];
+	return z[y * nCols + x];
 }
 
 bool HeightField::isInDomain(const int& x, const int& y)
@@ -112,16 +112,16 @@ float HeightField::getVelocityChange(const int& x, const int& y)
 	float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
 
 	// Mirrored boundary conditions
-	if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = u[y * nCols + x];
-	else northHeight = u[(y - 1) * nCols + x];
-	if (y == nRows - 1 || !bDomain[(y + 1) * nCols + x]) southHeight = u[y * nCols + x];
-	else southHeight = u[(y + 1) * nCols + x];
-	if (x == 0 || !bDomain[y * nCols + (x - 1)]) westHeight = u[y * nCols + x];
-	else westHeight = u[y * nCols + (x - 1)];
-	if (x == nCols - 1 || !bDomain[y * nCols + (x + 1)]) eastHeight = u[y * nCols + x];
-	else eastHeight = u[y * nCols + (x + 1)];
+	if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = z[y * nCols + x];
+	else northHeight = z[(y - 1) * nCols + x];
+	if (y == nRows - 1 || !bDomain[(y + 1) * nCols + x]) southHeight = z[y * nCols + x];
+	else southHeight = z[(y + 1) * nCols + x];
+	if (x == 0 || !bDomain[y * nCols + (x - 1)]) westHeight = z[y * nCols + x];
+	else westHeight = z[y * nCols + (x - 1)];
+	if (x == nCols - 1 || !bDomain[y * nCols + (x + 1)]) eastHeight = z[y * nCols + x];
+	else eastHeight = z[y * nCols + (x + 1)];
 
-	float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - u[y * nCols + x];
+	float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - z[y * nCols + x];
 
 	return result;
 }
