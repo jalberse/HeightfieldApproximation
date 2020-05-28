@@ -56,12 +56,12 @@ void HeightField::setHeights(float* heights)
 void HeightField::step(const float& fElapsedTime, const float& fDamp)
 {
 	// Calculate new velocities
-	for (int i = 0; i < nRows; i++)
+	for (int y = 0; y < nRows; y++)
 	{
-		for (int j = 0; j < nCols; j++)
+		for (int x = 0; x < nCols; x++)
 		{
-			dz[i * nCols + j] += getVelocityChange(j, i);
-			dz[i * nCols + j] *= fDamp; // dampen
+			dz[y * nCols + x] += getVelocityChange(x, y);
+			dz[y * nCols + x] *= fDamp; // dampen
 		}
 	}
 	// Update heights based on new velocities
