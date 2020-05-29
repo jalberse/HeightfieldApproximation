@@ -17,11 +17,12 @@ Currently, this visualization represents the heightfield in 2D, however it is po
 | Pause/Resume |  Space |
 | Perturb fluid surface | Left Click  |
 | Add terrain cell | Right Click  |
-| Remove terrain tell | Shift + Right Click |
+| Remove terrain cell | Shift + Right Click |
 | Clear terrain | C |
 | Decrease/Increase dampening term | N/M |
 | Reset fluid to new perlin noise | R |
 | Reset fluid and terrain to new perlin noise | Shift + R |
+| Decrease/Increase fluid level | Z/X |
 | Decrease/Increase perlin octave | O/P |
 | Decrease/Increase perlin scaling Bias | K/L | 
 | Decrease/Increase perlin octave (terrain) | Shift + O/P |
