@@ -32,15 +32,13 @@ private:
 	int nRows;
 	int nCols;
 
-	//thrust::host_vector<float> h_z;
-	/*
+	thrust::host_vector<float> h_z;
 	thrust::device_vector<float> d_z;
 	thrust::host_vector<float> h_dz;
 	thrust::device_vector<float> d_dz;
 	thrust::device_vector<float> d_ddz;
 	thrust::host_vector<bool> h_bDomain;
 	thrust::device_vector<bool> d_bDomain;
-	*/
 
 	float* dz = nullptr; // velocity matrix, flattened
 	float* z = nullptr; // height matrix, flattened

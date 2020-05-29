@@ -3,10 +3,19 @@
 #include "thrust/host_vector.h"
 #include "thrust/device_vector.h"
 
-HeightField::HeightField(int rows, int cols)
+// TODO work with making border of domain. Make sure we can't update it to be part of domain either. 
+
+HeightField::HeightField(int rows, int cols) :
+	h_z(rows * cols, 0.5f),
+	h_dz(rows* cols, 0.0f),
+	d_z(rows* cols, 0.5f),
+	d_dz(rows* cols, 0.0f),
+	d_ddz(rows* cols),
+	h_bDomain(rows * cols, true),
+	d_bDomain(rows * cols, true)
 {
 	/*
-		Creates a rectangular uniform heightfield with no internal restrictions on domain
+		Creates a rectangular uniform heightfield with no internal restrictions on domain and height of 0.5
 	*/
 	nRows = rows;
 	nCols = cols;
@@ -21,22 +30,40 @@ HeightField::HeightField(int rows, int cols)
 	}
 }
 
-HeightField::HeightField(int rows, int cols, float* heights) 
+HeightField::HeightField(int rows, int cols, float* heights) : 
+	h_z(heights, heights + (rows * cols)), 
+	h_dz(rows * cols, 0.0f), 
+	d_z(heights, heights + (rows * cols)),
+	d_dz(rows * cols, 0.0f),
+	d_ddz(rows * cols),
+	h_bDomain(rows* cols, true),
+	d_bDomain(rows* cols, true)
 {
 	nRows = rows;
 	nCols = cols;
 	z = new float[nRows * nCols];
 	dz = new float[nRows * nCols];
 	bDomain = new bool[nRows * nCols];
-	for (int i = 0; i < (nRows * nCols); i++)
+	for (int y = 0; y < nRows; y++)
 	{
-		z[i] = heights[i];
-		dz[i] = 0;
-		bDomain[i] = true;
+		for (int x = 0; x < nCols; x++)
+		{
+			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) bDomain[y * nCols + x] = false;
+			else bDomain[y * nCols + x] = true;
+			z[y * nCols + x] = heights[y * nCols + x];
+			dz[y * nCols + x] = 0;
+		}
 	}
 }
 
-HeightField::HeightField(int rows, int cols, float* heights, bool* domain)
+HeightField::HeightField(int rows, int cols, float* heights, bool* domain) :
+	h_z(heights, heights + (rows * cols)),
+	h_dz(rows* cols, 0.0f),
+	d_z(heights, heights + (rows * cols)),
+	d_dz(rows* cols, 0.0f),
+	d_ddz(rows* cols),
+	h_bDomain(domain, domain + (rows * cols)),
+	d_bDomain(domain, domain + (rows * cols))
 {
 	nRows = rows;
 	nCols = cols;
@@ -82,11 +109,20 @@ void HeightField::setHeight(const int& x, const int& y, const float& fHeight)
 void HeightField::setDomain(bool* domain)
 {
 	for (int i = 0; i < nRows * nCols; i++) bDomain = domain;
+	// Ensure border is not part of domain
+	for (int y = 0; y < nRows; y++)
+	{
+		for (int x = 0; x < nCols; x++)
+		{
+			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) bDomain[y * nCols + x] = false;
+		}
+	}
 }
 
 void HeightField::setDomainCell(const int& x, const int& y, const bool& b)
 {
-	if (x >= 0 && x < nCols && y >= 0 && y < nRows) bDomain[y * nCols + x] = b;
+	// Can't edit border cells
+	if (x > 0 && x < nCols - 1 && y > 0 && y < nRows - 1) bDomain[y * nCols + x] = b;
 }
 
 void HeightField::zeroVelocities()
@@ -96,7 +132,14 @@ void HeightField::zeroVelocities()
 
 void HeightField::clearDomain()
 {
-	for (int i = 0; i < (nRows * nCols); i++) bDomain[i] = true;
+	for (int y = 0; y < nRows; y++)
+	{
+		for (int x = 0; x < nCols; x++)
+		{
+			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) bDomain[y * nCols + x] = false;
+			else bDomain[y * nCols + x] = true;
+		}
+	}
 }
 
 float HeightField::getHeight(const int& x, const int& y)
