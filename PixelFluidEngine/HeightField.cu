@@ -2,70 +2,142 @@
 
 #include "thrust/host_vector.h"
 #include "thrust/device_vector.h"
+#include "thrust/iterator/constant_iterator.h"
 
 HeightField::HeightField(int rows, int cols, float* heights) : 
 	h_z(heights, heights + (rows * cols)), 
 	h_dz(rows * cols, 0.0f), 
-	d_z(heights, heights + (rows * cols)),
-	d_dz(rows * cols, 0.0f),
+	h_bDomain(rows * cols, true),
+	d_z(rows * cols),
+	d_dz(rows * cols),
 	d_ddz(rows * cols),
-	h_bDomain(rows* cols, true),
-	d_bDomain(rows* cols, true)
+	d_bDomain(rows * cols),
+	fDamp(0.999f)
 {
 	nRows = rows;
 	nCols = cols;
-	z = new float[nRows * nCols];
-	dz = new float[nRows * nCols];
-	bDomain = new bool[nRows * nCols];
 	for (int y = 0; y < nRows; y++)
 	{
 		for (int x = 0; x < nCols; x++)
 		{
-			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) bDomain[y * nCols + x] = false;
-			else bDomain[y * nCols + x] = true;
-			z[y * nCols + x] = heights[y * nCols + x];
-			dz[y * nCols + x] = 0;
+			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) h_bDomain[y * nCols + x] = false;
+			else h_bDomain[y * nCols + x] = true;
+			h_dz[y * nCols + x] = 0;
 		}
 	}
+}
+
+struct get_velocity_change {
+	__device__
+	float operator()(const thrust::tuple<float, float, float, float, float, bool, bool, bool, bool>& in) const {
+		/*
+			Tuple consists of:
+			center cell height
+			north cell height
+			south cell height
+			west cell height
+			east cell height
+			north cell domain flag
+			south cell domain flag
+			west cell domain flag
+			east cell domain flag
+		*/
+		float center = in.get<0>();
+		float north = in.get<1>();
+		float south = in.get<2>();
+		float west = in.get<3>();
+		float east = in.get<4>();
+
+		// Mirror boundary condition - if NSWE cells not flagged as part of domain, treat height as equal to central cell
+		if (!in.get<5>()) north = center;
+		if (!in.get<6>()) south = center;
+		if (!in.get<7>()) west = center;
+		if (!in.get<8>()) east = center;
+
+		return north + south + west + east / 4.0f - center;
+	}
+};
+
+struct update_velocity_with_dampening {
+	float fDamp;
+	update_velocity_with_dampening(float damp) : fDamp(damp) {}
+
+	__device__
+	float operator()(const float& fVel, const float& fAcc) const {
+		return (fVel + fAcc) * fDamp;
+	}
+};
+
+struct update_height_with_velocity {
+	float fElapsedTime;
+	update_height_with_velocity(float fTime) : fElapsedTime(fTime) {}
+
+	__device__
+	float operator()(const float& fHeight, const float& fVel) const {
+		return fHeight + (fVel * fElapsedTime);
+	}
+};
+
+void HeightField::step(const float& fElapsedTime)
+{
+	// TODO this is numerically unstable. Heights get driven up very quickly. Why?
+	// Run in the toy application and see effects at each step. 
+
+	// Copy data onto device
+	thrust::copy(h_z.begin(), h_z.end(), d_z.begin());
+	thrust::copy(h_dz.begin(), h_dz.end(), d_dz.begin());
+	thrust::copy(h_bDomain.begin(), h_bDomain.end(), d_bDomain.begin());
+
+	// Center (i), North (i - nCols), South (i + nCols), West (i - 1), East (i + 1)
+	auto start = thrust::make_zip_iterator(thrust::make_tuple(
+		&d_z[nCols + 1],                         // Center
+		&d_z[1],                                 // North
+		&d_z[nCols + 1 + nCols],                 // South
+		&d_z[nCols],                             // West
+		&d_z[nCols + 2],                         // East
+		&d_bDomain[1],                                 // North
+		&d_bDomain[nCols + 1 + nCols],                 // South
+		&d_bDomain[nCols],                             // West
+		&d_bDomain[nCols + 2]));                       // East
+	auto finish = thrust::make_zip_iterator(thrust::make_tuple(
+		&d_z[(nRows - 2) * nCols + (nCols - 1)], // Center - end(), so one-past-last element
+		&d_z[(nRows - 3) * nCols + (nCols - 1)], // North
+		&d_z[(nRows - 1) * nCols + (nCols - 1)], // South
+		&d_z[(nRows - 2) * nCols + (nCols - 2)], // West
+		&d_z[(nRows - 2) * nCols + (nCols)],     // East
+		&d_bDomain[(nRows - 3) * nCols + (nCols - 1)], // North
+		&d_bDomain[(nRows - 1) * nCols + (nCols - 1)], // South
+		&d_bDomain[(nRows - 2) * nCols + (nCols - 2)], // West
+		&d_bDomain[(nRows - 2) * nCols + (nCols)]));   // East  
+
+	thrust::transform(start, finish, &d_ddz[nCols + 1], get_velocity_change());
+	thrust::transform(d_dz.begin(), d_dz.end(), d_ddz.begin(), d_dz.begin(), update_velocity_with_dampening(fDamp));
+	thrust::transform(d_z.begin(), d_z.end(), d_dz.begin(), d_z.begin(), update_height_with_velocity(fElapsedTime));
+
+	// Copy data back to host
+	thrust::copy(d_z.begin(), d_z.end(), h_z.begin());
+	thrust::copy(d_dz.begin(), d_dz.end(), h_dz.begin());
 }
 
 void HeightField::setHeights(float* heights)
 {
-	for (int i = 0; i < (nRows * nCols); i++) z[i] = heights[i];
-}
-
-void HeightField::step(const float& fElapsedTime, const float& fDamp)
-{
-	// Calculate new velocities
-	for (int y = 0; y < nRows; y++)
-	{
-		for (int x = 0; x < nCols; x++)
-		{
-			dz[y * nCols + x] += getVelocityChange(x, y);
-			dz[y * nCols + x] *= fDamp; // dampen
-		}
-	}
-	// Update heights based on new velocities
-	for (int i = 0; i < (nRows * nCols); i++)
-	{
-		z[i] += dz[i] * fElapsedTime;
-	}
+	thrust::copy(heights, heights + (nRows * nCols), h_z.begin());
 }
 
 void HeightField::setHeight(const int& x, const int& y, const float& fHeight)
 {
-	z[y * nCols + x] = fHeight;
+	h_z[y * nCols + x] = fHeight;
 }
 
 void HeightField::setDomain(bool* domain)
 {
-	for (int i = 0; i < nRows * nCols; i++) bDomain = domain;
+	thrust::copy(domain, domain + (nRows * nCols), h_bDomain.begin());
 	// Ensure border is not part of domain
 	for (int y = 0; y < nRows; y++)
 	{
 		for (int x = 0; x < nCols; x++)
 		{
-			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) bDomain[y * nCols + x] = false;
+			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) h_bDomain[y * nCols + x] = false;
 		}
 	}
 }
@@ -73,12 +145,12 @@ void HeightField::setDomain(bool* domain)
 void HeightField::setDomainCell(const int& x, const int& y, const bool& b)
 {
 	// Can't edit border cells
-	if (x > 0 && x < nCols - 1 && y > 0 && y < nRows - 1) bDomain[y * nCols + x] = b;
+	if (x > 0 && x < nCols - 1 && y > 0 && y < nRows - 1) h_bDomain[y * nCols + x] = b;
 }
 
 void HeightField::zeroVelocities()
 {
-	for (int i = 0; i < (nRows * nCols); i++) dz[i] = 0;
+	for (int i = 0; i < (nRows * nCols); i++) h_dz[i] = 0;
 }
 
 void HeightField::clearDomain()
@@ -87,38 +159,19 @@ void HeightField::clearDomain()
 	{
 		for (int x = 0; x < nCols; x++)
 		{
-			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) bDomain[y * nCols + x] = false;
-			else bDomain[y * nCols + x] = true;
+			if (y == 0 || x == 0 || y == nRows - 1 || x == nCols - 1) h_bDomain[y * nCols + x] = false;
+			else h_bDomain[y * nCols + x] = true;
 		}
 	}
 }
 
 float HeightField::getHeight(const int& x, const int& y)
 {
-	return z[y * nCols + x];
+	return h_z[y * nCols + x];
 }
 
 bool HeightField::isInDomain(const int& x, const int& y)
 {
 	if (x < 0 || x >= nCols || y < 0 || y >= nRows) return false;
-	return bDomain[y * nCols + x];
-}
-
-float HeightField::getVelocityChange(const int& x, const int& y)
-{
-	float eastHeight, westHeight, northHeight, southHeight; // heights of neighbors
-
-	// Mirrored boundary conditions
-	if (y == 0 || !bDomain[(y - 1) * nCols + x]) northHeight = z[y * nCols + x];
-	else northHeight = z[(y - 1) * nCols + x];
-	if (y == nRows - 1 || !bDomain[(y + 1) * nCols + x]) southHeight = z[y * nCols + x];
-	else southHeight = z[(y + 1) * nCols + x];
-	if (x == 0 || !bDomain[y * nCols + (x - 1)]) westHeight = z[y * nCols + x];
-	else westHeight = z[y * nCols + (x - 1)];
-	if (x == nCols - 1 || !bDomain[y * nCols + (x + 1)]) eastHeight = z[y * nCols + x];
-	else eastHeight = z[y * nCols + (x + 1)];
-
-	float result = (northHeight + southHeight + westHeight + eastHeight) / 4.0f - z[y * nCols + x];
-
-	return result;
+	return h_bDomain[y * nCols + x];
 }

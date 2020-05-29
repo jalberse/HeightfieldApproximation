@@ -13,12 +13,13 @@ class HeightField
 public:
 	HeightField(int rows, int cols, float* heights);
 
-	void step(const float& fElapsedTime, const float& fDamp = 1.0f);
+	void step(const float& fElapsedTime);
 
 	void setHeights(float* heights);
 	void setHeight(const int& x, const int& y, const float& fHeight);
 	void setDomain(bool* domain);
 	void setDomainCell(const int& x, const int& y, const bool& b);
+	void setFDamp(const float& damp) { fDamp = damp; }
 	void zeroVelocities();
 	void clearDomain();
 	float getHeight(const int& x, const int& y);
@@ -29,6 +30,7 @@ public:
 private:
 	int nRows;
 	int nCols;
+	float fDamp;
 
 	thrust::host_vector<float> h_z;
 	thrust::device_vector<float> d_z;
@@ -37,10 +39,4 @@ private:
 	thrust::device_vector<float> d_ddz;
 	thrust::host_vector<bool> h_bDomain;
 	thrust::device_vector<bool> d_bDomain;
-
-	float* dz = nullptr; // velocity matrix, flattened
-	float* z = nullptr; // height matrix, flattened
-	bool* bDomain = nullptr; // bool representing fluid domain; 1 if can flow, 0 if not 
-
-	float getVelocityChange(const int& x, const int& y);
 };

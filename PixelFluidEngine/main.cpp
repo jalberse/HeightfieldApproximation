@@ -46,6 +46,9 @@
 // Be able to render a 3D plane with pixelGameEngine
 // Render heightmap with pixelGameEngine (3D)
 // Switch between 2D and 3D views (menu system?)
+// More complex heightfield model which accounts for grid spacing h and wave speed c
+// Once in 3D, add rudimentary interactions with particles - if particle collides with column, 
+//	add height to column and delete the particle
 
 class PixelFluidEngine : public olc::PixelGameEngine
 {
@@ -64,7 +67,7 @@ private:
 	int nCols = 256;
 	int nMouseX;
 	int nMouseY;
-	bool paused = false;
+	bool paused = true;
 	float fDampMax = 1.0f;
 	float fDamp = 0.999f;
 	float fDampMin = 0.98f;
@@ -127,7 +130,7 @@ private:
 		}
 		drawUI();
 		
-		if (!paused) hField->step(fElapsedTime, fDamp);
+		if (!paused) hField->step(fElapsedTime);
 		
 		return true;
 	}
@@ -177,8 +180,12 @@ private:
 			}
 			else if (fScalingBias >= fScalingBiasMin + fScalingBiasStep) fScalingBias -= fScalingBiasStep;
 		}
-		if (GetKey(olc::Key::M).bReleased) if (fDamp <= fDampMax - fDampStep) fDamp += fDampStep;
-		if (GetKey(olc::Key::N).bReleased) if (fDamp >= fDampMin + fDampStep) fDamp -= fDampStep;
+		if (GetKey(olc::Key::M).bReleased && fDamp <= fDampMax - fDampStep) {
+			fDamp += fDampStep;
+		}
+		if (GetKey(olc::Key::N).bReleased && fDamp >= fDampMin + fDampStep) {
+			fDamp -= fDampStep;
+		}
 		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
 		if (GetKey(olc::Key::C).bReleased) hField->clearDomain();
 		if (GetKey(olc::Key::S).bHeld && paused) hField->step(fElapsedTime);
