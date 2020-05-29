@@ -3,33 +3,6 @@
 #include "thrust/host_vector.h"
 #include "thrust/device_vector.h"
 
-// TODO work with making border of domain. Make sure we can't update it to be part of domain either. 
-
-HeightField::HeightField(int rows, int cols) :
-	h_z(rows * cols, 0.5f),
-	h_dz(rows* cols, 0.0f),
-	d_z(rows* cols, 0.5f),
-	d_dz(rows* cols, 0.0f),
-	d_ddz(rows* cols),
-	h_bDomain(rows * cols, true),
-	d_bDomain(rows * cols, true)
-{
-	/*
-		Creates a rectangular uniform heightfield with no internal restrictions on domain and height of 0.5
-	*/
-	nRows = rows;
-	nCols = cols;
-	z = new float[nRows * nCols];
-	dz = new float[nRows * nCols];
-	bDomain = new bool[nRows * nCols];
-	for (int i = 0; i < (nRows * nCols); i++)
-	{
-		z[i] = 1.0f;
-		dz[i] = 0;
-		bDomain[i] = true;
-	}
-}
-
 HeightField::HeightField(int rows, int cols, float* heights) : 
 	h_z(heights, heights + (rows * cols)), 
 	h_dz(rows * cols, 0.0f), 
@@ -53,28 +26,6 @@ HeightField::HeightField(int rows, int cols, float* heights) :
 			z[y * nCols + x] = heights[y * nCols + x];
 			dz[y * nCols + x] = 0;
 		}
-	}
-}
-
-HeightField::HeightField(int rows, int cols, float* heights, bool* domain) :
-	h_z(heights, heights + (rows * cols)),
-	h_dz(rows* cols, 0.0f),
-	d_z(heights, heights + (rows * cols)),
-	d_dz(rows* cols, 0.0f),
-	d_ddz(rows* cols),
-	h_bDomain(domain, domain + (rows * cols)),
-	d_bDomain(domain, domain + (rows * cols))
-{
-	nRows = rows;
-	nCols = cols;
-	z = new float[nRows * nCols];
-	dz = new float[nRows * nCols];
-	bDomain = new bool[nRows * nCols];
-	for (int i = 0; i < (nRows * nCols); i++)
-	{
-		z[i] = heights[i];
-		dz[i] = 0;
-		bDomain[i] = domain[i];
 	}
 }
 

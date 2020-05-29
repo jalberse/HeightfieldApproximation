@@ -11,9 +11,7 @@ class HeightField
 	https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf
 	*/
 public:
-	HeightField(int rows, int cols);
 	HeightField(int rows, int cols, float* heights);
-	HeightField(int rows, int cols, float* heights, bool* domain);
 
 	void step(const float& fElapsedTime, const float& fDamp = 1.0f);
 
