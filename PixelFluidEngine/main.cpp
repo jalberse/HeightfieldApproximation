@@ -67,7 +67,7 @@ private:
 	int nCols = 256;
 	int nMouseX;
 	int nMouseY;
-	bool paused = true;
+	bool paused = false;
 	float fDampMax = 1.0f;
 	float fDamp = 0.999f;
 	float fDampMin = 0.98f;

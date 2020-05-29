@@ -54,7 +54,7 @@ struct get_velocity_change {
 		if (!in.get<7>()) west = center;
 		if (!in.get<8>()) east = center;
 
-		return north + south + west + east / 4.0f - center;
+		return (north + south + west + east) / 4.0f - center;
 	}
 };
 
