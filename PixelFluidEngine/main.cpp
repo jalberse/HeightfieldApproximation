@@ -182,9 +182,11 @@ private:
 		}
 		if (GetKey(olc::Key::M).bReleased && fDamp <= fDampMax - fDampStep) {
 			fDamp += fDampStep;
+			hField->setFDamp(fDamp);
 		}
 		if (GetKey(olc::Key::N).bReleased && fDamp >= fDampMin + fDampStep) {
 			fDamp -= fDampStep;
+			hField->setFDamp(fDamp);
 		}
 		if (GetKey(olc::Key::SPACE).bReleased) paused = !paused;
 		if (GetKey(olc::Key::C).bReleased) hField->clearDomain();
