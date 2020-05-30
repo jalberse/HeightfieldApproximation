@@ -38,7 +38,8 @@
 #include <math.h>
 
 // TODO: 
-// GPU support
+// Speed up the GPU implementation. Bottleneck is getting accelerations from tuples.
+// Fix perlin so we can operate with smaller domains. Right now get /0 error as we shift all 8 octaves
 // A button to make it start/stop "raining" would be fun
 // Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
 // Toggle periodic boundary conditions vs mirror (?)

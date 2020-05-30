@@ -28,8 +28,9 @@ HeightField::HeightField(int rows, int cols, float* heights) :
 }
 
 struct get_velocity_change {
+	template <typename Tuple>
 	__device__
-	float operator()(const thrust::tuple<float, float, float, float, float, bool, bool, bool, bool>& in) const {
+	float operator()(Tuple t) const {
 		/*
 			Tuple consists of:
 			center cell height
@@ -42,19 +43,20 @@ struct get_velocity_change {
 			west cell domain flag
 			east cell domain flag
 		*/
-		float center = in.get<0>();
-		float north = in.get<1>();
-		float south = in.get<2>();
-		float west = in.get<3>();
-		float east = in.get<4>();
+		
+		float center = thrust::get<0>(t);
+		float north = thrust::get<1>(t);
+		float south = thrust::get<2>(t);
+		float west = thrust::get<3>(t);
+		float east = thrust::get<4>(t);
 
 		// Mirror boundary condition - if NSWE cells not flagged as part of domain, treat height as equal to central cell
-		if (!in.get<5>()) north = center;
-		if (!in.get<6>()) south = center;
-		if (!in.get<7>()) west = center;
-		if (!in.get<8>()) east = center;
-
-		return (north + south + west + east) / 4.0f - center;
+		if (!thrust::get<5>(t)) north = center;
+		if (!thrust::get<6>(t)) south = center;
+		if (!thrust::get<7>(t)) west = center;
+		if (!thrust::get<8>(t)) east = center;
+		
+		thrust::get<9>(t) = (north + south + west + east) / 4.0f - center;
 	}
 };
 
@@ -80,15 +82,11 @@ struct update_height_with_velocity {
 
 void HeightField::step(const float& fElapsedTime)
 {
-	// TODO this is numerically unstable. Heights get driven up very quickly. Why?
-	// Run in the toy application and see effects at each step. 
-
 	// Copy data onto device
 	thrust::copy(h_z.begin(), h_z.end(), d_z.begin());
 	thrust::copy(h_dz.begin(), h_dz.end(), d_dz.begin());
 	thrust::copy(h_bDomain.begin(), h_bDomain.end(), d_bDomain.begin());
-
-	// Center (i), North (i - nCols), South (i + nCols), West (i - 1), East (i + 1)
+	
 	auto start = thrust::make_zip_iterator(thrust::make_tuple(
 		&d_z[nCols + 1],                         // Center
 		&d_z[1],                                 // North
@@ -98,7 +96,8 @@ void HeightField::step(const float& fElapsedTime)
 		&d_bDomain[1],                                 // North
 		&d_bDomain[nCols + 1 + nCols],                 // South
 		&d_bDomain[nCols],                             // West
-		&d_bDomain[nCols + 2]));                       // East
+		&d_bDomain[nCols + 2],						   // East
+		d_ddz.begin() + nCols + 1));                   // Output
 	auto finish = thrust::make_zip_iterator(thrust::make_tuple(
 		&d_z[(nRows - 2) * nCols + (nCols - 1)], // Center - end(), so one-past-last element
 		&d_z[(nRows - 3) * nCols + (nCols - 1)], // North
@@ -108,9 +107,11 @@ void HeightField::step(const float& fElapsedTime)
 		&d_bDomain[(nRows - 3) * nCols + (nCols - 1)], // North
 		&d_bDomain[(nRows - 1) * nCols + (nCols - 1)], // South
 		&d_bDomain[(nRows - 2) * nCols + (nCols - 2)], // West
-		&d_bDomain[(nRows - 2) * nCols + (nCols)]));   // East  
+		&d_bDomain[(nRows - 2) * nCols + (nCols)],     // East
+		d_ddz.begin() + (nRows - 2) * nCols + (nCols - 1)));  // Output 
 
-	thrust::transform(start, finish, &d_ddz[nCols + 1], get_velocity_change());
+	// Apply transformations
+	thrust::for_each(start, finish, get_velocity_change()); // This is our bottleneck
 	thrust::transform(d_dz.begin(), d_dz.end(), d_ddz.begin(), d_dz.begin(), update_velocity_with_dampening(fDamp));
 	thrust::transform(d_z.begin(), d_z.end(), d_dz.begin(), d_z.begin(), update_height_with_velocity(fElapsedTime));
 
