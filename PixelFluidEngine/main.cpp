@@ -2,7 +2,7 @@
 	What is this?
 	~~~~~~~~~~~~~
 
-	This software is a tool for visualizing fluid simulation algorithms for computer graphics applications.
+	This software is a tool for visualizing the heightfield approximation algorithm for real-time computer graphics applications.
 	This is built on top of the OneLoneCoder PixelGameEngine: https://github.com/OneLoneCoder/olcPixelGameEngine/wiki
 
 	LICENSE (MIT)
