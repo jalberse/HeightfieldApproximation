@@ -37,20 +37,6 @@
 
 #include <math.h>
 
-// TODO: 
-// Speed up the GPU implementation. Bottleneck is getting accelerations from tuples.
-// Fix perlin so we can operate with smaller domains. Right now get /0 error as we shift all 8 octaves
-// A button to make it start/stop "raining" would be fun
-// Buttons to change parameters/clean up UI generally. On own branch. Keep hotkeys for "expert" (my) use
-// Toggle periodic boundary conditions vs mirror (?)
-// Different render modes for 2D - gradients, component velocities, etc?
-// Be able to render a 3D plane with pixelGameEngine
-// Render heightmap with pixelGameEngine (3D)
-// Switch between 2D and 3D views (menu system?)
-// More complex heightfield model which accounts for grid spacing h and wave speed c
-// Once in 3D, add rudimentary interactions with particles - if particle collides with column, 
-//	add height to column and delete the particle
-
 class PixelFluidEngine : public olc::PixelGameEngine
 {
 public:

@@ -49,8 +49,6 @@ struct get_velocity_change {
 		float west = thrust::get<3>(t);
 		float east = thrust::get<4>(t);
 
-		// Mirror boundary condition - if NSWE cells not flagged as part of domain, treat height as equal to central cell
-		// TODO Obviate branching, though empirically this isn't impacting performance as we are more limited by memory bandwidth
 		if (!thrust::get<5>(t)) north = center;
 		if (!thrust::get<6>(t)) south = center;
 		if (!thrust::get<7>(t)) west = center;
@@ -111,8 +109,6 @@ void HeightField::step(const float& fElapsedTime)
 		d_ddz.begin() + (nRows - 2) * nCols + (nCols - 1)));  // Output 
 
 	// Apply transformations
-	// TODO Reduce memory operations. Possibly through transformation fusions, 
-	//	    likely by implementing the CUDA kernal directly to avoid passing redundant data.
 	thrust::for_each(start, finish, get_velocity_change()); // This is our bottleneck
 	thrust::transform(d_dz.begin(), d_dz.end(), d_ddz.begin(), d_dz.begin(), update_velocity_with_dampening(fDamp));
 	thrust::transform(d_z.begin(), d_z.end(), d_dz.begin(), d_z.begin(), update_height_with_velocity(fElapsedTime));
