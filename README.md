@@ -12,6 +12,8 @@ Heightfield approximation is a computationally cheap and relatively simple metho
 
 Currently, this visualization represents the heightfield in 2D, however it is possible to use the data to generate a polygonal mesh to view the fluid surface in 3D. 
 
+If you're just interested in downloading it, it's available on [itch.io](https://johnalberse.itch.io/fluid-surface-sim).
+
 | Option | Key |
 |---|---|
 | Pause/Resume |  Space |
