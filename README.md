@@ -30,3 +30,6 @@ If you're just interested in downloading it, it's available on [itch.io](https:/
 | Decrease/Increase perlin octave (terrain) | Shift + O/P |
 | Decrease/Increase perlin scaling bias (Terrain) | Shift + K/L |
 | Advance Simulation (while paused) | S |
+
+
+Note: While CUDA is used, it's very poorly optimized as I wrote it 5 years ago with little understanding of parallel algorithms. Don't emulate it :)
